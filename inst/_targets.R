@@ -138,7 +138,7 @@ list(
 
   tar_target(ind_proximity,
              command={
-               NULL
+
              }),
 
   # Components

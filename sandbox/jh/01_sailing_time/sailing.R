@@ -160,3 +160,5 @@ for (i in seq_along(sch_df$HarbourName[1:3])) {
   }
   }
 }
+
+ind_proximety <- data.frame(HarbourName=names(sailing_output), Value=NA, Scoring=NA)
