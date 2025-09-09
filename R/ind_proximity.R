@@ -10,6 +10,7 @@
 #' sailing computation or a driving distance is not available, it defaults back
 #' to a straight-line distance and way cross land. For driving distance if
 #' the straight line computation is used a driving distance of 70 km/h is assumed.
+#' The final output takes the larger of the sailing and driving distances.
 #'
 #' @param data_CIVI_Sites A data frame likely from [data_CIVI_Sites()]
 #' @param full_results a Boolean indicating if you want a more fulsome result
@@ -97,7 +98,8 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
       sailing_output[[i]] <- data.frame(
         Neighbour = NA,
         Distance_Sailing_Km = NA,
-        plot=NA
+        plot=NA,
+        SailingTime_Hours=NA
       )
 
       driving_output[[i]] <- data.frame(
@@ -111,8 +113,10 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
       sailing_output[[i]] <- data.frame(
         Neighbour = within_20$HarbourName,
         Distance_Sailing_Km = NA,
-        plot=NA
+        plot=NA,
+        SailingTime_Hours=NA
       )
+      #JAIM
 
       driving_output[[i]] <- data.frame(
         Neighbour = within_20$HarbourName,
@@ -125,13 +129,12 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
 
       origin_coords <- c(origin_lon, origin_lat)
-
-
       # Compute sailing distance for all sch within 20 km.
 
       vessel_speed_kmh <- 18  ### Roughly 10 knots
 
       for (j in seq_along(within_20$HarbourName)) {
+        message("j = ",j)
         #message(paste0("j = ", j))
         compared_coords <- c(within_20$Long[j],within_20$Lat[j])
 
@@ -205,6 +208,9 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
         # 9. Plot and calculate distance if path is valid
         if (!is.null(path)) {
+          # if (i == 5 && j == 3) {
+          #   browser()
+          # }
           route_sf <- st_as_sf(path)
           st_crs(route_sf) <- 4326
 
@@ -276,8 +282,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
         driving_output[[i]]$Distance_Driving_Km[j] <- dist_km
         driving_output[[i]]$Time_Driving_Km[j] <- duration_hr
 
-
-        if (!(is.null(driving_plot))) {
+        if (!(is.null(driving_plot)) && !(is.null(res))) {
           map <- leaflet() %>%
             addTiles() %>%
             addPolylines(
@@ -301,7 +306,8 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
           driving_output[[i]]$plot[[j]] <- map
         } else {
-          driving_output[[i]]$plot[[j]] <- NULL
+          #browser()
+          driving_output[[i]]$plot[[j]] <- 1
 
         }
 
@@ -311,7 +317,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
   ind_proximety <- data.frame(HarbourName=names(sailing_output), Sailing_Nearest_Neighbour=NA, Sailing_Time=NA, Sailing_Distance=NA, Driving_Nearest_Neighbour=NA, Driving_Distance=NA, Driving_Time=NA, Sailing_Plot=NA, Driving_Plot=NA)
   for (i in seq_along(sailing_output)) {
-    message(i)
+    message("sailing output i = ", i)
     if (!(all(is.na(sailing_output[[i]]$Neighbour)))) {
     keep <- which(sailing_output[[i]]$Distance_Sailing_Km == min(sailing_output[[i]]$Distance_Sailing_Km))
     ind_proximety$Sailing_Nearest_Neighbour[i] <- sailing_output[[i]]$Neighbour[keep]
@@ -340,7 +346,8 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
   ind_proximety_short <- data.frame(HarbourName=names(sailing_output), Value=NA, Score=NA)
 
   for (i in seq_along(ind_proximety$HarbourName)) {
-    message(i)
+    message("proximity output i = ", i)
+
     if (!(is.na(ind_proximety$Sailing_Time[i]) && is.na(ind_proximety$Driving_Time[i]))) {
       max_result <- max(ind_proximety$Sailing_Time[i], ind_proximety$Driving_Time[i],na.rm=TRUE)
 

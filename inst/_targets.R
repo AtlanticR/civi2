@@ -138,29 +138,41 @@ list(
 
   tar_target(ind_proximity,
              command={
-
+               # FIXME: SAVE ors_api_key
+                ind_proximity(sites, ors_api_key="your_ors_api_key")
              }),
 
   # Components
   tar_target(comp_sensitivity,
              command={
-               NULL
+               df <- data.frame(harbourCode=data_CIVI_Sites$HarbourCode, harbourName=data_CIVI_Sites$HarbourName, sensitivity=NA)
+
+              df$sensitivity <- geometricMean(c(ind_coastal_sensitivity_index$Scoring,
+                              ind_harbour_condition$Scoring,
+                              ind_degree_of_protection$Scoring))
              }),
 
   tar_target(comp_exposure,
              command={
-               NULL
+               df <- data.frame(harbourCode=data_CIVI_Sites$HarbourCode, harbourName=data_CIVI_Sites$HarbourName, exposure=NA)
+
+               df$exposure <- geometricMean(c(ind_sea_level_change$Scoring,
+                               ind_ice_day_change$Scoring))
              }),
 
   tar_target(comp_adaptive_capacity,
              command={
-               NULL
+               df <- data.frame(harbourCode=data_CIVI_Sites$HarbourCode, harbourName=data_CIVI_Sites$HarbourName, adaptive_capacity=NA)
+               df$adaptive_capacity <- geometricMean(c(ind_replacement_cost$Scoring,
+                               ind_harbour_utilization$Scoring,
+                               ind_proximity$Scoring))
+               df
              }),
 
   # CIVI
 
   tar_target(CIVI,
              command={
-               NULL
+               sqrt(comp_sensitivity*comp_exposure*comp_exposure) ^(1/3)
              })
 )
