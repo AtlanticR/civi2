@@ -30,11 +30,15 @@ list(
   tar_target(data_CIVI_Sites,
              command={
                # file from Yanice Berkane (SCH)
-               read_excel(file.path(store, "data", "2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx")) |>
-                 filter(!is.na(Latitude) & !is.na(Longitude)) |>
-                 sf::st_as_sf(coords = c("Longitude", "Latitude"),
-                          crs = 4326,
-                          remove = FALSE)
+               file <- read_excel(file.path(store, "data", "2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx")) |>
+                 filter(!is.na(Latitude) & !is.na(Longitude))
+
+               x <- data.frame(HarbourCode=file$`Harb Code`, HarbourName=file$`Harb Name`, Administration=file$`Harb Responsibility`, Province=file$`Harbour Province Name`,
+                               HarbourType=file$`Harb Type Desc`, MarineInland="Marine", Lat=file$Latitude, Long=file$Longitude, Zone=file$`Harbour Region Name`)|>
+                 sf::st_as_sf(coords = c("Long", "Lat"),
+                              crs = 4326,
+                              remove = FALSE)
+
              }),
 
   tar_target(data_sea_level,
@@ -182,7 +186,7 @@ list(
   tar_target(ind_proximity,
              command={
                # FIXME: SAVE ors_api_key
-                ind_proximity(sites, ors_api_key="your_ors_api_key")
+                ind_proximity(data_CIVI_Sites, ors_api_key=read.table(file.path(store,"data","ors_api_key.txt"))$V1)
              }),
 
   # Components
