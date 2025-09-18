@@ -43,7 +43,7 @@
 #' @importFrom fasterize fasterize
 #' @importFrom gdistance transition geoCorrection shortestPath
 #' @importFrom ggplot2 ggplot geom_sf geom_text labs theme_minimal coord_sf
-#' @importFrom ors_directions openrouteservice
+#' @importFrom openrouteservice ors_directions
 #' @importFrom leaflet leaflet addTiles addPolylines addMarkers
 #'
 #' @export
