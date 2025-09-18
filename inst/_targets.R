@@ -162,31 +162,45 @@ list(
 
   tar_target(ind_sea_level_change,
              command={
-               st_extract(data_sea_level, data_CIVI_Sites)
-               #TODO score 1-5, normalize? remove geometry add harbour code?
+               st_extract(data_sea_level, data_CIVI_Sites) |>
+                 as.data.frame() |>
+                 mutate(Value = as.numeric(ssp245_rslc_p50),
+                        Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5),
+                        HarbourCode = data_CIVI_Sites$HarbourCode) |>  #TODO document that the Values are in cm
+                 select(HarbourCode,Value,Score)
              }),
 
   tar_target(ind_ice_day_change,
              command={
-               st_extract(data_ice_days, data_CIVI_Sites)
-               #TODO score 1-5, normalize? remove geometry add harbour code?
+               st_extract(data_ice_days, data_CIVI_Sites)|>
+                 as.data.frame() |>
+                 mutate(Value = as.numeric(abs(mean)),
+                        Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5),
+                        HarbourCode = data_CIVI_Sites$HarbourCode) |>  #TODO document that the Values are in days
+                 select(HarbourCode,Value,Score)
 
              }),
 
   tar_target(ind_replacement_cost,
              command={
-               NULL
+               data_CIVI_ReplacementCost |>
+                 mutate(HarbourCode = `Harb Code`) |>
+                 group_by(HarbourCode) |>
+                 reframe(Value = sum(`Facility Replacement Cost`, na.rm=TRUE)) |>
+                 mutate(Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5))
              }),
 
   tar_target(ind_harbour_utilization,
              command={
-               NULL
+               x=data_CIVI_HarbourCondition |>
+                 mutate(HarbourCode = `Harb Code`,
+                        Value = as.numeric(`Harbour Utilization`),
+                        Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5))
              }),
 
   tar_target(ind_proximity,
              command={
-               # FIXME: SAVE ors_api_key
-                ind_proximity(data_CIVI_Sites, ors_api_key=read.table(file.path(store,"data","ors_api_key.txt"))$V1)
+                ind_proximity(data_CIVI_Sites[1:30,], ors_api_key=read.table(file.path(store,"data","ors_api_key.txt"))$V1)
              }),
 
   # Components
@@ -195,8 +209,8 @@ list(
                df <- data.frame(harbourCode=data_CIVI_Sites$HarbourCode, harbourName=data_CIVI_Sites$HarbourName, sensitivity=NA)
 
               df$sensitivity <- geometricMean(c(ind_coastal_sensitivity_index$Scoring,
-                              ind_harbour_condition$Scoring,
-                              ind_degree_of_protection$Scoring))
+                              abs(6-ind_harbour_condition$Scoring),
+                              abs(6-ind_degree_of_protection$Scoring)))
              }),
 
   tar_target(comp_exposure,
@@ -210,8 +224,8 @@ list(
   tar_target(comp_adaptive_capacity,
              command={
                df <- data.frame(harbourCode=data_CIVI_Sites$HarbourCode, harbourName=data_CIVI_Sites$HarbourName, adaptive_capacity=NA)
-               df$adaptive_capacity <- geometricMean(c(ind_replacement_cost$Scoring,
-                               ind_harbour_utilization$Scoring,
+               df$adaptive_capacity <- geometricMean(c(abs(6-ind_replacement_cost$Scoring),
+                               abs(6-ind_harbour_utilization$Scoring),
                                ind_proximity$Scoring))
                df
              }),
@@ -220,6 +234,6 @@ list(
 
   tar_target(CIVI,
              command={
-               sqrt(comp_sensitivity*comp_exposure*comp_exposure) ^(1/3)
+               sqrt(comp_sensitivity$sensitivity*comp_exposure$exposure*abs(6-comp_adaptive_capacity$adaptive_capacity)) ^(1/3)
              })
 )
