@@ -1,5 +1,6 @@
 if(!require(librarian)) install.packages("librarian")
-pkgs <- c("targets",
+pkgs <- c("AtlanticR/civi2",
+          "targets",
           "readxl",
           "sf",
           "stars",
@@ -94,13 +95,55 @@ list(
                ice_days_delta
              }),
 
+  # Coastal Sensitivity Index
+  tar_target(data_CanCoast2.0,
+             command = {
+               #download zip from https://ostrnrcan-dostrncan.canada.ca/entities/publication/caff0f1b-6adb-4470-be2c-d4461cf29793
+               # Manson, G. K., Couture, N. J. & James, T. S. (2019). CanCoast 2.0: data and indices to describe the sensitivity of Canada's marine coasts to changing climate. Geological Survey of Canada, Open File, 8551, 18. https://doi.org/10.4095/314669
+               url <- "https://geoscan.nrcan.gc.ca/download/gid_314669.zip?_gl=1*1c0ko2t*_ga*MTA3MTYyNTAwNy4xNzE5MzI3MTk4*_ga_C2N57Y7DX5*MTcyMzE0MjcwMi42LjEuMTcyMzE0MjcxOS4wLjAuMA.."
+               destfile <- file.path(tempdir(),"gid_314669.zip")
+               if (!file.exists(destfile)) {
+                 GET(url, write_disk(destfile, overwrite = TRUE))
+               }
+
+               # unzip
+               cancoast <- file.path(store,
+                                     "data",
+                                     "cancoast")
+               if(!dir.exists(cancoast)){
+                 dir.create(cancoast,recursive=TRUE)
+               }
+               unzip(destfile,exdir = cancoast)
+               file.path(cancoast,list.files(cancoast,recursive=TRUE))
+             },
+             format = "file",
+             cue = tar_cue("never"),
+             packages = "httr" # this is probably the only time we'll use this package so it doesn't nee to load every time!
+  ),
+
+  tar_target(data_CANCOAST_CSI_V2_5_6,
+             command = st_read(data_CanCoast2.0[endsWith(data_CanCoast2.0,"CANCOAST_CSI_V2_5_6.shp")]) |>
+               st_transform(4326)
+             ),
+
+  tar_target(data_CSIScore_Intersection,
+             command = {
+               siteBufferToMultiLineIntersection(
+                 sites = data_CIVI_Sites,
+                 name_sites = "harbourCode",
+                 sfLines = data_CANCOAST_CSI_V2_5_6,
+                 name_sfLines_variable = "CSI_diff"
+               )
+             }),
+
 
 
   # Indicators
 
   tar_target(ind_coastal_sensitivity_index,
              command={
-               NULL
+               data_CSIScore_Intersection |>
+                 mutate(CSI_diffScore=as.numeric(cut(weighted.mean.CSI_diff,breaks=5, labels=1:5)))
              }),
 
   tar_target(ind_harbour_condition,
