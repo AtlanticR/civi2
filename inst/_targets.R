@@ -165,7 +165,7 @@ list(
                st_extract(data_sea_level, data_CIVI_Sites) |>
                  as.data.frame() |>
                  mutate(Value = as.numeric(ssp245_rslc_p50),
-                        Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5),
+                        Score = cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5),
                         HarbourCode = data_CIVI_Sites$HarbourCode) |>  #TODO document that the Values are in cm
                  select(HarbourCode,Value,Score)
              }),
@@ -174,8 +174,8 @@ list(
              command={
                st_extract(data_ice_days, data_CIVI_Sites)|>
                  as.data.frame() |>
-                 mutate(Value = as.numeric(abs(mean)),
-                        Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5),
+                 mutate(Value = as.numeric(mean),
+                        Score = cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5),
                         HarbourCode = data_CIVI_Sites$HarbourCode) |>  #TODO document that the Values are in days
                  select(HarbourCode,Value,Score)
 
