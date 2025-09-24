@@ -152,7 +152,7 @@ list(
 
   tar_target(ind_harbour_condition,
              command={
-               x=data_CIVI_HarbourCondition |>
+               data_CIVI_HarbourCondition |>
                  mutate(HarbourCode = `Harb Code`,
                         Value = as.numeric(`Harb Condition`),
                         Score = Value)
@@ -195,7 +195,7 @@ list(
 
   tar_target(ind_harbour_utilization,
              command={
-               x=data_CIVI_HarbourCondition |>
+               data_CIVI_HarbourCondition |>
                  mutate(HarbourCode = `Harb Code`,
                         Value = as.numeric(`Harbour Utilization`),
                         Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5))
