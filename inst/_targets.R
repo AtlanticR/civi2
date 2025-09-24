@@ -152,7 +152,10 @@ list(
 
   tar_target(ind_harbour_condition,
              command={
-               NULL
+               x=data_CIVI_HarbourCondition |>
+                 mutate(HarbourCode = `Harb Code`,
+                        Value = as.numeric(`Harb Condition`),
+                        Score = Value)
              }),
 
   tar_target(ind_degree_of_protection,
