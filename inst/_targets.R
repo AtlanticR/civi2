@@ -214,6 +214,7 @@ list(
               df$sensitivity <- geometricMean(c(ind_coastal_sensitivity_index$Scoring,
                               abs(6-ind_harbour_condition$Scoring),
                               abs(6-ind_degree_of_protection$Scoring)))
+              df
              }),
 
   tar_target(comp_exposure,
@@ -222,6 +223,7 @@ list(
 
                df$exposure <- geometricMean(c(ind_sea_level_change$Scoring,
                                ind_ice_day_change$Scoring))
+               df
              }),
 
   tar_target(comp_adaptive_capacity,
@@ -237,6 +239,6 @@ list(
 
   tar_target(CIVI,
              command={
-               sqrt(comp_sensitivity$sensitivity*comp_exposure$exposure*abs(6-comp_adaptive_capacity$adaptive_capacity)) ^(1/3)
+               geometricMean(comp_sensitivity$sensitivity*comp_exposure$exposure*abs(6-comp_adaptive_capacity$adaptive_capacity))
              })
 )
