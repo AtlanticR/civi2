@@ -134,7 +134,7 @@ list(
              command = {
                siteBufferToMultiLineIntersection(
                  sites = data_CIVI_Sites,
-                 name_sites = "harbourCode",
+                 name_sites = "HarbourCode",
                  sfLines = data_CANCOAST_CSI_V2_5_6,
                  name_sfLines_variable = "CSI_diff"
                )
@@ -147,7 +147,10 @@ list(
   tar_target(ind_coastal_sensitivity_index,
              command={
                data_CSIScore_Intersection |>
-                 mutate(CSI_diffScore=as.numeric(cut(weighted.mean.CSI_diff,breaks=5, labels=1:5)))
+                 mutate(HarbourCode = as.numeric(HarbourCode),
+                        Value = weighted.mean.CSI_diff,
+                        Score=as.numeric(cut(Value,breaks=5, labels=1:5)))|>
+                 select(HarbourCode,Value,Score)
              }),
 
   tar_target(ind_harbour_condition,
@@ -155,7 +158,8 @@ list(
                data_CIVI_HarbourCondition |>
                  mutate(HarbourCode = `Harb Code`,
                         Value = as.numeric(`Harb Condition`),
-                        Score = Value)
+                        Score = Value)|>
+                 select(HarbourCode,Value,Score)
              }),
 
   tar_target(ind_degree_of_protection,
@@ -190,7 +194,8 @@ list(
                  mutate(HarbourCode = `Harb Code`) |>
                  group_by(HarbourCode) |>
                  reframe(Value = sum(`Facility Replacement Cost`, na.rm=TRUE)) |>
-                 mutate(Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5))
+                 mutate(Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5)) |>
+                 select(HarbourCode,Value,Score)
              }),
 
   tar_target(ind_harbour_utilization,
@@ -198,7 +203,8 @@ list(
                data_CIVI_HarbourCondition |>
                  mutate(HarbourCode = `Harb Code`,
                         Value = as.numeric(`Harbour Utilization`),
-                        Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5))
+                        Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5)) |>
+                 select(HarbourCode,Value,Score)
              }),
 
   tar_target(ind_proximity,
@@ -209,36 +215,67 @@ list(
   # Components
   tar_target(comp_sensitivity,
              command={
-               df <- data.frame(harbourCode=data_CIVI_Sites$HarbourCode, harbourName=data_CIVI_Sites$HarbourName, sensitivity=NA)
-
-              df$sensitivity <- geometricMean(c(ind_coastal_sensitivity_index$Scoring,
-                              abs(6-ind_harbour_condition$Scoring),
-                              abs(6-ind_degree_of_protection$Scoring)))
-              df
+               list(ind_coastal_sensitivity_index = ind_coastal_sensitivity_index,
+                    ind_harbour_condition = ind_harbour_condition) |>
+                 imap(function(df, name) {
+                   df |>
+                     rename(!!paste0(name, "_Value") := Value,
+                            !!paste0(name, "_Score") := Score)
+                 }) |>
+                 reduce(full_join, by = "HarbourCode") |>
+                 rowwise() |>
+                 mutate(sensitivity = geometricMean(
+                   c(ind_coastal_sensitivity_index_Score,
+                     abs(6-ind_harbour_condition_Score))))
              }),
 
   tar_target(comp_exposure,
              command={
-               df <- data.frame(harbourCode=data_CIVI_Sites$HarbourCode, harbourName=data_CIVI_Sites$HarbourName, exposure=NA)
+               list(ind_sea_level_change = ind_sea_level_change,
+                    ind_ice_day_change = ind_ice_day_change) |>
+                 imap(function(df, name) {
+                   df |>
+                     rename(!!paste0(name, "_Value") := Value,
+                            !!paste0(name, "_Score") := Score)
+                 }) |>
+                 reduce(full_join, by = "HarbourCode") |>
+                 rowwise() |>
+                 mutate(exposure = geometricMean(
+                   c(ind_sea_level_change_Score,
+                     ind_ice_day_change_Score)))
 
-               df$exposure <- geometricMean(c(ind_sea_level_change$Scoring,
-                               ind_ice_day_change$Scoring))
-               df
+
              }),
 
   tar_target(comp_adaptive_capacity,
              command={
-               df <- data.frame(harbourCode=data_CIVI_Sites$HarbourCode, harbourName=data_CIVI_Sites$HarbourName, adaptive_capacity=NA)
-               df$adaptive_capacity <- geometricMean(c(abs(6-ind_replacement_cost$Scoring),
-                               abs(6-ind_harbour_utilization$Scoring),
-                               ind_proximity$Scoring))
-               df
+               list(ind_replacement_cost = ind_replacement_cost,
+                    ind_harbour_utilization = ind_harbour_utilization,
+                    ind_proximity = ind_proximity) |>
+                 imap(function(df, name) {
+                   df |>
+                     rename(!!paste0(name, "_Value") := Value,
+                            !!paste0(name, "_Score") := Score)
+                 }) |>
+                 reduce(full_join, by = "HarbourCode") |>
+                 rowwise() |>
+                 mutate(adaptive_capacity = geometricMean(
+                   c(abs(6-ind_replacement_cost_Score),
+                     abs(6-ind_harbour_utilization_Score),
+                     ind_proximity_Score)))
              }),
 
   # CIVI
 
   tar_target(CIVI,
              command={
-               geometricMean(comp_sensitivity$sensitivity*comp_exposure$exposure*abs(6-comp_adaptive_capacity$adaptive_capacity))
+               comp_sensitivity |>
+                 full_join(comp_exposure, by="HarbourCode") |>
+                 full_join(comp_adaptive_capacity, by="HarbourCode") |>
+                 rowwise() |>
+                 mutate(CIVI = geometricMean(
+                   c(sensitivity,
+                     exposure,
+                     abs(6-adaptive_capacity))))
              })
 )
