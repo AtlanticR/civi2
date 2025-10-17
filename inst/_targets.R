@@ -203,7 +203,7 @@ list(
 
   tar_target(ind_proximity,
              command={
-                ind_proximity(data_CIVI_Sites[1:30,], ors_api_key=read.table(file.path(store,"data","ors_api_key.txt"))$V1)
+                ind_proximity(data_CIVI_Sites, ors_api_key=read.table(file.path(store,"data","ors_api_key.txt"))$V1)
              }),
 
   # Components

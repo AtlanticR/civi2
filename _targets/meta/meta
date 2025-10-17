@@ -1,0 +1,5 @@
+name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
+pkgs|object|ffc828e5f4763200
+store|object|d58693a676e25e90
+.Random.seed|object|5520a301b3539ec5
+data_CIVI_Sites|stem|ec95ea203e9f91c0|6274b4f1ccefea62|45201576690955aa|610911831||t20349.6009792637s|s36618b|36618|rds|local|vector|||0.087||

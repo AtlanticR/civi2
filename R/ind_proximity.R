@@ -45,6 +45,7 @@
 #' @importFrom ggplot2 ggplot geom_sf geom_text labs theme_minimal coord_sf aes
 #' @importFrom openrouteservice ors_directions ors_api_key
 #' @importFrom leaflet leaflet addTiles addPolylines addMarkers
+#' @importFrom htmltools tags
 #'
 #' @export
 #'
@@ -78,7 +79,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
 
   # Function to get 2 nearest neighbours (based on sailing)
-  for (i in seq_along(sch_df$HarbourName)) {
+  for (i in seq_along(sch_df$HarbourName[1:50])) {
     message(paste0("i = ", i))
     origin_lat <- sch_df$Lat[i]
     origin_lon <- sch_df$Long[i]
@@ -92,7 +93,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
       matrix(c(others$Long, others$Lat), ncol=2)
     ) / 1000
 
-    within_20 <- others[dists_haversine <= 20, , drop = FALSE]
+    within_20 <- others[dists_haversine <= 10, , drop = FALSE] # NOTE: THIS COULD BE REMOVED
 
     if (nrow(within_20) == 0) {
       sailing_output[[i]] <- data.frame(
@@ -116,7 +117,6 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
         plot=NA,
         SailingTime_Hours=NA
       )
-      #JAIM
 
       driving_output[[i]] <- data.frame(
         Neighbour = within_20$HarbourName,
@@ -145,60 +145,61 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
         )
 
         waypoints_sf <- st_as_sf(waypoints, coords = c("lon", "lat"), crs = 4326)
-
+        proj <- "+proj=eqdc +lon_0=-96.328125 +lat_1=45.5659042 +lat_2=76.9551598 +lat_0=61.260532 +datum=WGS84 +units=m +no_defs"
+        waypoints_proj <- st_transform(waypoints_sf, crs=proj)
         # 2. Download and buffer land
-        land <- ne_download(scale = "medium", type = "land", category = "physical", returnclass = "sf")
-        land_proj <- st_transform(land, crs = 32620)
-        land_buffered <- st_buffer(land_proj, dist = -100)  # inward buffer
-        land_buffered_wgs84 <- st_transform(land_buffered, crs = 4326)
+        land <- ne_download(scale = "large", type = "land", category = "physical", returnclass = "sf") #Downloading the land at medium scale
+        land_proj <- st_transform(land, crs = "+proj=eqdc +lon_0=-96.328125 +lat_1=45.5659042 +lat_2=76.9551598 +lat_0=61.260532 +datum=WGS84 +units=m +no_defs") # Changing the projection #32620
+        #plot(land_proj$geometry)
+        land_buffered_wgs84 <- land_proj
+        #land_buffered <- st_buffer(land_proj, dist = -100)  # inward buffer (take each land and move it inwards by 100 units)
+        #land_buffered_wgs84 <- st_transform(land_proj, crs = "") # Switch to another projection (this could be one problem)
 
-        # 3. Create raster grid that automatically covers waypoints + buffer
-        bb <- st_bbox(waypoints_sf)
-        margin <- 0.5   # half a degree buffer around waypoints
+        # 3. Create raster grid
+        bb <- st_bbox(waypoints_proj) # puts a box around your points of interest
+        margin <- 100000   # 10 m buffer around waypoints
         r <- raster(extent(bb$xmin - margin, bb$xmax + margin,
                            bb$ymin - margin, bb$ymax + margin),
-                    res = 0.01)
+                    res = 100) # (m) - this resolution would make the line within 100 m of the point
         r[] <- 1  # water = 1
 
         # 4. Rasterize buffered land
-        land_raster <- fasterize(land_buffered_wgs84, r)
-        r[!is.na(land_raster[])] <- Inf  # land = impassable
+        land_raster <- fasterize(land_buffered_wgs84, r) # This shows us where the land is
+        r[!is.na(land_raster[])] <- 99999999999  # land = impassable
 
-        # 5. Check if waypoints fall on valid raster cells
-        extract_vals <- raster::extract(r, st_coordinates(waypoints_sf))
-        if (any(is.infinite(extract_vals) | is.na(extract_vals))) {
-          default <- TRUE
-          #stop("One or more waypoints fall on land or NA cells. Adjust coordinates or resolution.")
-
-          message("⚠️ One or more waypoints fall on land or NA cells. Falling back to straight-line distance.")
-
-          # fallback: straight-line Haversine distance
-          distance <- distHaversine(p1, p2) / 1000  # in km
-
-          sailing_output[[i]]$Distance_Sailing_Km[j] <- round(distance, 2)
-
-          sailing_output[[i]]$plot[[j]] <- ggplot() +
-            geom_sf(data = land, fill = "gray80", color = "black") +
-            geom_sf(data = waypoints_sf, color = "red", size = 2) +
-            geom_text(data = waypoints, aes(x = lon, y = lat, label = name),
-                      nudge_y = 0.05, size = 3.5, fontface = "bold") +
-            labs(title = "Fallback Route (Straight Line)",
-                 subtitle = paste(waypoints$name, collapse = " → "),
-                 x = "Longitude", y = "Latitude") +
-            theme_minimal()
-        } else {
-          default <- FALSE
-        }
-
-        if (!(default)) {
-
-        # 7. Create transition object
+        # 6. Check if waypoints fall on valid raster cells
+        extract_vals <- raster::extract(r, st_coordinates(waypoints_proj)) # look up each waypoint value to see which raster (land or water it's in)
+        # Determine how easy to move from one waypoint to another
+        # if both water (1) it's easy, if one is land it's impassible
         tr <- transition(r, transitionFunction = function(x) 1 / mean(x), directions = 8)
+        # Above it assumes that all 'steps' are the same size. Below takes into account real geographic distances
         tr <- geoCorrection(tr, type = "c")
 
-        # 8. Compute least-cost path
-        p1 <- as.numeric(st_coordinates(waypoints_sf[1, ]))
-        p2 <- as.numeric(st_coordinates(waypoints_sf[2, ]))
+
+        p1 <- st_coordinates(waypoints_proj[1, ])
+        p2 <- st_coordinates(waypoints_proj[2, ])
+        # snap points to nearest water cell if on land
+
+        # snap_flag <- FALSE  # track if snapping happened
+        #
+        # # Below checks if the point is on land. It then flattens the raster to find which are not land.
+        # # it uses xyFromCell() to convert lat to lng and then uses: distGeo() to see how far it is from water. It then moves the point
+        # snap_to_water <- function(coord, raster_layer) {
+        #   if (is.infinite(raster::extract(raster_layer, coord))) {
+        #     water_cells <- which(raster_layer[] != Inf, arr.ind = TRUE)
+        #     xy <- xyFromCell(raster_layer, water_cells)
+        #     dists <- geosphere::distGeo(matrix(coord, ncol = 2), xy)
+        #     snap_flag <<- TRUE  # mark that snapping happened
+        #     return(xy[which.min(dists), ])
+        #   } else {
+        #     return(coord)
+        #   }
+        # }
+        #
+        # p1 <- snap_to_water(p1, r)
+        # p2 <- snap_to_water(p2, r)
+
+        # Calculating shortest path across a raster.
         path <- tryCatch({
           shortestPath(tr, p1, p2, output = "SpatialLines")
         }, error = function(e) {
@@ -208,24 +209,38 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
         # 9. Plot and calculate distance if path is valid
         if (!is.null(path)) {
-          # if (i == 5 && j == 3) {
-          #   browser()
-          # }
-          route_sf <- st_as_sf(path)
-          st_crs(route_sf) <- 4326
+          route_proj <- st_as_sf(path)
+          st_crs(route_proj) <- proj
+          route_sf <- st_transform(route_proj, crs=4326)
+          land_buffered_wgs84 <- st_transform(land_buffered_wgs84, crs=4326)
 
-          ggp <- ggplot() +
-            geom_sf(data = land, fill = "gray80", color = "black") +
-            geom_sf(data = route_sf, color = "blue", size = 1.2) +
-            geom_sf(data = waypoints_sf, color = "red", size = 2) +
-            geom_text(data = waypoints, aes(x = lon, y = lat, label = name),
-                      nudge_y = 0.05, size = 3.5, fontface = "bold") +
-            coord_sf(xlim = c(bb$xmin - margin, bb$xmax + margin),
-                     ylim = c(bb$ymin - margin, bb$ymax + margin), expand = FALSE) +
-            labs(title = "Simulated Sailing Route",
-                 subtitle = paste(waypoints$name, collapse = " → "),
-                 x = "Longitude", y = "Latitude") +
-            theme_minimal()
+          #st_crs(waypoints_sf
+          #st_crs(land) <- 4326
+
+          # Create leaflet map
+          #title_text <- if (snap_flag) "Snap to water applied" else "Sailing route not altered"
+          title_text <= "sailing route"
+          ggp  <- leaflet() %>%
+            addTiles() %>%
+            # Add sailing route
+            addPolylines(data = route_sf,
+                         color = "blue",
+                         weight = 3,
+                         opacity = 1) %>%
+            # Add waypoints
+            addCircleMarkers(data = waypoints_sf,
+                             color = "red",
+                             radius = 6,
+                             fillOpacity = 1,
+                             label = ~name) %>%
+            # Set view to focus on the area
+            setView(lng = mean(waypoints$lon), lat = mean(waypoints$lat), zoom = 9) %>%
+            addControl(html = paste0("<h3>", title_text, "</h3>"), position = "topright") %>%
+            addPolygons(data=land_buffered_wgs84, col='brown')
+
+
+          coords <- st_coordinates(route_sf)
+          distance <- sum(geosphere::distGeo(coords[-nrow(coords), 1:2], coords[-1, 1:2]))
 
           sailing_output[[i]]$plot[[j]] <- ggp
           coords <- st_coordinates(route_sf)
@@ -234,10 +249,10 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
           sailing_output[[i]]$SailingTime_Hours[j] <- round(sailing_output[[i]]$Distance_Sailing_Km[j] / vessel_speed_kmh, 2)  ### 🔴 new line
 
 
-          #cat("✅ Total sailing distance (avoiding land):", round(distance / 1000, 2), "km\n")
+
+          cat("✅ Total sailing distance (avoiding land):", round(distance / 1000, 2), "km\n")
         } else {
           cat("❌ No valid sailing route found. Try adjusting resolution or waypoint positions.\n")
-        }
         }
 
 
@@ -263,19 +278,19 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
         } else {
 
-        dist_m <- tryCatch({
-          res$features[[1]]$properties$summary$distance
-        }, error = function(e) NA)
+          dist_m <- tryCatch({
+            res$features[[1]]$properties$summary$distance
+          }, error = function(e) NA)
 
 
-        dist_km <- dist_m/1000
+          dist_km <- dist_m/1000
 
 
-        # TIME
-        duration_sec <- res$features[[1]]$properties$summary$duration
+          # TIME
+          duration_sec <- res$features[[1]]$properties$summary$duration
 
-        # Convert to hours
-        duration_hr <- duration_sec / 3600
+          # Convert to hours
+          duration_hr <- duration_sec / 3600
 
         }
 
@@ -294,14 +309,14 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
             addMarkers(
               lng = st_coordinates(driving_plot)[1, "X"],
               lat = st_coordinates(driving_plot)[1, "Y"],
-              popup = "Origin",
-              label = "Origin"
+              popup = sch_df$HarbourName[i],
+              label = sch_df$HarbourName[i]
             ) %>%
             addMarkers(
               lng = st_coordinates(driving_plot)[nrow(st_coordinates(driving_plot)), "X"],
               lat = st_coordinates(driving_plot)[nrow(st_coordinates(driving_plot)), "Y"],
-              popup = "Destination",
-              label = "Destination"
+              popup = driving_output[[i]]$Neighbour[j],
+              label = driving_output[[i]]$Neighbour[j]
             )
 
           driving_output[[i]]$plot[[j]] <- map
@@ -310,8 +325,10 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
           driving_output[[i]]$plot[[j]] <- 1
 
         }
-
       }
+
+
+
     }
   }
 
@@ -320,12 +337,15 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
     message("sailing output i = ", i)
     if (!(all(is.na(sailing_output[[i]]$Neighbour)))) {
     keep <- which(sailing_output[[i]]$Distance_Sailing_Km == min(sailing_output[[i]]$Distance_Sailing_Km))
+    if (length(keep) == 1) {
     ind_proximety$Sailing_Nearest_Neighbour[i] <- sailing_output[[i]]$Neighbour[keep]
-    ind_proximety$Sailing_Distance[i] <- sailing_output[[i]]$Distance_Sailing_Km[keep]
-    ind_proximety$Sailing_Plot[i] <- sailing_output[[i]]$plot[keep]
-    ind_proximety$Sailing_Time[i] <- sailing_output[[i]]$SailingTime_Hours[keep]
+    } else {
+      ind_proximety$Sailing_Nearest_Neighbour[i] <- paste0(sailing_output[[i]]$Neighbour[keep], collapse=" & ")
 
-
+    }
+    ind_proximety$Sailing_Distance[i] <- sailing_output[[i]]$Distance_Sailing_Km[keep][1]
+    ind_proximety$Sailing_Plot[i] <- sailing_output[[i]]$plot[keep][1]
+    ind_proximety$Sailing_Time[i] <- sailing_output[[i]]$SailingTime_Hours[keep][1]
     }
 
 
@@ -337,8 +357,6 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
       ind_proximety$Driving_Plot[i] <- driving_output[[i]]$plot[keep]
     }
-
-
   }
 
   ind_proximety$Result <- NA
@@ -369,6 +387,20 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
   # Score
   ind_proximety_short$Score <- cut(as.vector(transformSkewness(ind_proximety_short$Value)), breaks=5, labels=1:5)
+
+
+  # New Changing Names
+  ind_proximety_short$HarbourCode <- NA
+  if (!(full_results)) {
+  for (i in seq_along(ind_proximety_short$HarbourName)) {
+    ind_proximety_short$HarbourCode[i] <- data_CIVI_Sites$HarbourCode[which(data_CIVI_Sites$HarbourName == ind_proximety$HarbourName[i])]
+  }
+
+    ind_proximety_short <- ind_proximety_short[,c("HarbourCode", "Value", "Score")]
+
+
+  }
+  # End New
 
   if (full_results) {
     return(ind_proximety)
