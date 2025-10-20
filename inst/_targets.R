@@ -9,6 +9,7 @@ pkgs <- c("AtlanticR/civi2",
           "qs2",
           "purrr",
           "dplyr")
+
 shelf(pkgs)
 tar_option_set(packages = basename(pkgs))
 
@@ -40,6 +41,7 @@ list(
                  sf::st_as_sf(coords = c("Long", "Lat"),
                               crs = 4326,
                               remove = FALSE)
+               x
 
              }),
 
@@ -150,7 +152,7 @@ list(
   tar_target(ind_coastal_sensitivity_index,
              command={
                data_CSIScore_Intersection |>
-                 mutate(HarbourCode = as.numeric(HarbourCode),
+                 mutate(HarbourCode = as.numeric(harbourCode),
                         Value = weighted.mean.CSI_diff,
                         Score=as.numeric(cut(Value,breaks=5, labels=1:5)))|>
                  select(HarbourCode,Value,Score)
@@ -212,8 +214,14 @@ list(
 
   tar_target(ind_proximity,
              command={
-                ind_proximity(data_CIVI_Sites, ors_api_key=read.table(file.path(store,"data","ors_api_key.txt"))$V1)
+                ind_proximity(data_CIVI_Sites, data_CIVI_Sites, ors_api_key=read.table(file.path(store,"data","ors_api_key.txt"))$V1)
              }),
+
+  tar_target(ind_proximity_full_debug,
+             command={
+               ind_proximity(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=read.table(file.path(store,"data","ors_api_key.txt"))$V1, full_results=TRUE)
+             }),
+
 
   # Components
   tar_target(comp_sensitivity,
