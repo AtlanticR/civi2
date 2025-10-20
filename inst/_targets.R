@@ -177,7 +177,7 @@ list(
                st_extract(data_sea_level, data_CIVI_Sites) |>
                  as.data.frame() |>
                  mutate(Value = as.numeric(ssp245_rslc_p50),
-                        Score = cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5),
+                        Score = as.numeric(cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5)),
                         HarbourCode = data_CIVI_Sites$HarbourCode) |>  #TODO document that the Values are in cm
                  select(HarbourCode,Value,Score)
              }),
@@ -187,7 +187,7 @@ list(
                st_extract(data_ice_days, data_CIVI_Sites)|>
                  as.data.frame() |>
                  mutate(Value = as.numeric(mean),
-                        Score = cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5),
+                        Score = as.numeric(cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5)),
                         HarbourCode = data_CIVI_Sites$HarbourCode) |>  #TODO document that the Values are in days
                  select(HarbourCode,Value,Score)
 
@@ -199,7 +199,7 @@ list(
                  mutate(HarbourCode = `Harb Code`) |>
                  group_by(HarbourCode) |>
                  reframe(Value = sum(`Facility Replacement Cost`, na.rm=TRUE)) |>
-                 mutate(Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5)) |>
+                 mutate(Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5)) |>
                  select(HarbourCode,Value,Score)
              }),
 
@@ -208,7 +208,7 @@ list(
                data_CIVI_HarbourCondition |>
                  mutate(HarbourCode = `Harb Code`,
                         Value = as.numeric(`Harbour Utilization`),
-                        Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5)) |>
+                        Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5)) |>
                  select(HarbourCode,Value,Score)
              }),
 
