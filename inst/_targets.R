@@ -39,6 +39,7 @@ list(
                  sf::st_as_sf(coords = c("Long", "Lat"),
                               crs = 4326,
                               remove = FALSE)
+               x
 
              }),
 
