@@ -7,6 +7,7 @@ pkgs <- c("AtlanticR/civi2",
           "ncmeta",
           "qs",
           "qs2",
+          "purrr",
           "dplyr")
 shelf(pkgs)
 tar_option_set(packages = basename(pkgs))
@@ -22,6 +23,7 @@ if(dir.exists("//wpnsbio9039519.mar.dfo-mpo.ca/sambashare/CIVI/civi2")){
 }
 
 tar_config_set(store = store)
+
 
 
 # Define the targets pipeline
@@ -217,53 +219,41 @@ list(
              command={
                list(ind_coastal_sensitivity_index = ind_coastal_sensitivity_index,
                     ind_harbour_condition = ind_harbour_condition) |>
-                 imap(function(df, name) {
-                   df |>
-                     rename(!!paste0(name, "_Value") := Value,
-                            !!paste0(name, "_Score") := Score)
-                 }) |>
-                 reduce(full_join, by = "HarbourCode") |>
+                 join_comps() |>
                  rowwise() |>
                  mutate(sensitivity = geometricMean(
                    c(ind_coastal_sensitivity_index_Score,
                      abs(6-ind_harbour_condition_Score))))
-             }),
+             },
+             tidy_eval = FALSE),
 
   tar_target(comp_exposure,
              command={
                list(ind_sea_level_change = ind_sea_level_change,
                     ind_ice_day_change = ind_ice_day_change) |>
-                 imap(function(df, name) {
-                   df |>
-                     rename(!!paste0(name, "_Value") := Value,
-                            !!paste0(name, "_Score") := Score)
-                 }) |>
-                 reduce(full_join, by = "HarbourCode") |>
+                 join_comps() |>
                  rowwise() |>
                  mutate(exposure = geometricMean(
                    c(ind_sea_level_change_Score,
                      ind_ice_day_change_Score)))
 
 
-             }),
+             },
+             tidy_eval = FALSE),
 
   tar_target(comp_adaptive_capacity,
              command={
                list(ind_replacement_cost = ind_replacement_cost,
                     ind_harbour_utilization = ind_harbour_utilization,
                     ind_proximity = ind_proximity) |>
-                 imap(function(df, name) {
-                   df |>
-                     rename(!!paste0(name, "_Value") := Value,
-                            !!paste0(name, "_Score") := Score)
-                 }) |>
-                 reduce(full_join, by = "HarbourCode") |>
+                 join_comps() |>
                  rowwise() |>
                  mutate(adaptive_capacity = geometricMean(
                    c(abs(6-ind_replacement_cost_Score),
                      abs(6-ind_harbour_utilization_Score),
                      ind_proximity_Score)))
-             }),
+             },
+             tidy_eval = FALSE),
 
   # CIVI
 

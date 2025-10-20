@@ -7,8 +7,14 @@
 geometricMean(x, warn = TRUE)
 }
 \arguments{
-\item{x}{}
+\item{x}{numeric vector}
+}
+\value{
+numeric scalar, the geometric mean of x
 }
 \description{
 Calculate the geometric mean
+}
+\examples{
+geometricMean(c(1,2,3,4,5))
 }

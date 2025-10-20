@@ -1,11 +1,12 @@
 #' Calculate the geometric mean
 #'
-#' @param x
+#' @param x numeric vector
 #'
-#' @return
+#' @return numeric scalar, the geometric mean of x
 #' @export
 #'
 #' @examples
+#' geometricMean(c(1,2,3,4,5))
 geometricMean <- function(x,warn = TRUE){
   if(0 %in% x){
     if(warn) warning("There are zeros in your dataset. They will be removed before taking the geometric mean.")
