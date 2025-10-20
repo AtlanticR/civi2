@@ -134,11 +134,12 @@ list(
 
   tar_target(data_CSIScore_Intersection,
              command = {
-               siteBufferToMultiLineIntersection(
-                 sites = data_CIVI_Sites,
+               siteBufferToMultiLineIntersection_future(
+                 sites = data_CIVI_Sites[1:5,],
                  name_sites = "HarbourCode",
                  sfLines = data_CANCOAST_CSI_V2_5_6,
-                 name_sfLines_variable = "CSI_diff"
+                 name_sfLines_variable = "CSI_diff",
+                 n_cores = 5
                )
              }),
 
