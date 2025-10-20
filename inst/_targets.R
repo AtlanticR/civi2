@@ -199,7 +199,7 @@ list(
                  mutate(HarbourCode = `Harb Code`) |>
                  group_by(HarbourCode) |>
                  reframe(Value = sum(`Facility Replacement Cost`, na.rm=TRUE)) |>
-                 mutate(Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5)) |>
+                 mutate(Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5))) |>
                  select(HarbourCode,Value,Score)
              }),
 
@@ -208,7 +208,7 @@ list(
                data_CIVI_HarbourCondition |>
                  mutate(HarbourCode = `Harb Code`,
                         Value = as.numeric(`Harbour Utilization`),
-                        Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5)) |>
+                        Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5))) |>
                  select(HarbourCode,Value,Score)
              }),
 
