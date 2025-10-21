@@ -393,7 +393,11 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
   ind_proximety_short$HarbourCode <- NA
   if (!(full_results)) {
   for (i in seq_along(ind_proximety_short$HarbourName)) {
-    ind_proximety_short$HarbourCode[i] <- data_CIVI_Sites$HarbourCode[which(data_CIVI_Sites$HarbourName == ind_proximety$HarbourName[i])]
+    message(i)
+    keep <- which(data_CIVI_Sites$HarbourName == ind_proximety$HarbourName[i])
+    if (!(length(keep) == 0)) {
+    ind_proximety_short$HarbourCode[i] <- data_CIVI_Sites$HarbourCode[keep]
+    }
   }
 
     ind_proximety_short <- ind_proximety_short[,c("HarbourCode", "Value", "Score")]
