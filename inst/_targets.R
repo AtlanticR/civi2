@@ -7,11 +7,14 @@ pkgs <- c("AtlanticR/civi2",
           "ncmeta",
           "qs",
           "qs2",
+          "future",
+          "future.apply",
           "purrr",
           "dplyr")
 
 shelf(pkgs)
-tar_option_set(packages = basename(pkgs))
+tar_option_set(packages = basename(pkgs),
+               error = "continue")
 
 # Set the store path for targets
 if(dir.exists("//wpnsbio9039519.mar.dfo-mpo.ca/sambashare/CIVI/civi2")){
@@ -136,12 +139,14 @@ list(
 
   tar_target(data_CSIScore_Intersection,
              command = {
-               siteBufferToMultiLineIntersection_future(
-                 sites = data_CIVI_Sites[1:5,],
+               future_siteBufferToMultiLineIntersection(
+                 sites = data_CIVI_Sites,
                  name_sites = "HarbourCode",
                  sfLines = data_CANCOAST_CSI_V2_5_6,
                  name_sfLines_variable = "CSI_diff",
-                 n_cores = 5
+                 n_cores = 10,
+                 max_size = 10000*1024^2
+
                )
              }),
 
