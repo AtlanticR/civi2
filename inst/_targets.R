@@ -7,15 +7,9 @@ pkgs <- c("AtlanticR/civi2",
           "ncmeta",
           "qs",
           "qs2",
-<<<<<<< HEAD
           "dplyr",
           "purrr",
           "leaflet")
-=======
-          "purrr",
-          "dplyr")
-
->>>>>>> f579d983020c39161158fefa51bd6946ed5cb666
 shelf(pkgs)
 tar_option_set(packages = basename(pkgs))
 
@@ -260,30 +254,15 @@ list(
              command={
                list(ind_replacement_cost = ind_replacement_cost,
                     ind_harbour_utilization = ind_harbour_utilization,
-<<<<<<< HEAD
                     ind_sch_proximity = ind_sch_proximity) |>
-                 imap(function(df, name) {
-                   df |>
-                     rename(!!paste0(name, "_Value") := Value,
-                            !!paste0(name, "_Score") := Score)
-                 }) |>
-                 reduce(full_join, by = "HarbourCode") |>
-=======
-                    ind_proximity = ind_proximity) |>
                  join_comps() |>
->>>>>>> f579d983020c39161158fefa51bd6946ed5cb666
                  rowwise() |>
                  mutate(adaptive_capacity = geometricMean(
                    c(abs(6-ind_replacement_cost_Score),
                      abs(6-ind_harbour_utilization_Score),
-<<<<<<< HEAD
                      ind_sch_proximity_Score)))
-             }),
-=======
-                     ind_proximity_Score)))
              },
              tidy_eval = FALSE),
->>>>>>> f579d983020c39161158fefa51bd6946ed5cb666
 
   # CIVI
 
