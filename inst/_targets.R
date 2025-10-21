@@ -9,9 +9,9 @@ pkgs <- c("AtlanticR/civi2",
           "qs2",
           "future",
           "future.apply",
+          "dplyr",
           "purrr",
-          "dplyr")
-
+          "leaflet")
 shelf(pkgs)
 tar_option_set(packages = basename(pkgs),
                error = "continue")
@@ -217,7 +217,7 @@ list(
                  select(HarbourCode,Value,Score)
              }),
 
-  tar_target(ind_proximity,
+  tar_target(ind_sch_proximity,
              command={
                 ind_proximity(data_CIVI_Sites, data_CIVI_Sites, ors_api_key=read.table(file.path(store,"data","ors_api_key.txt"))$V1)
              }),
@@ -259,13 +259,13 @@ list(
              command={
                list(ind_replacement_cost = ind_replacement_cost,
                     ind_harbour_utilization = ind_harbour_utilization,
-                    ind_proximity = ind_proximity) |>
+                    ind_sch_proximity = ind_sch_proximity) |>
                  join_comps() |>
                  rowwise() |>
                  mutate(adaptive_capacity = geometricMean(
                    c(abs(6-ind_replacement_cost_Score),
                      abs(6-ind_harbour_utilization_Score),
-                     ind_proximity_Score)))
+                     ind_sch_proximity_Score)))
              },
              tidy_eval = FALSE),
 
