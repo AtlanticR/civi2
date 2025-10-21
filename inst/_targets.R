@@ -7,9 +7,15 @@ pkgs <- c("AtlanticR/civi2",
           "ncmeta",
           "qs",
           "qs2",
+<<<<<<< HEAD
           "dplyr",
           "purrr",
           "leaflet")
+=======
+          "purrr",
+          "dplyr")
+
+>>>>>>> f579d983020c39161158fefa51bd6946ed5cb666
 shelf(pkgs)
 tar_option_set(packages = basename(pkgs))
 
@@ -24,6 +30,7 @@ if(dir.exists("//wpnsbio9039519.mar.dfo-mpo.ca/sambashare/CIVI/civi2")){
 }
 
 tar_config_set(store = store)
+
 
 
 # Define the targets pipeline
@@ -135,11 +142,12 @@ list(
 
   tar_target(data_CSIScore_Intersection,
              command = {
-               siteBufferToMultiLineIntersection(
-                 sites = data_CIVI_Sites,
+               siteBufferToMultiLineIntersection_future(
+                 sites = data_CIVI_Sites[1:5,],
                  name_sites = "HarbourCode",
                  sfLines = data_CANCOAST_CSI_V2_5_6,
-                 name_sfLines_variable = "CSI_diff"
+                 name_sfLines_variable = "CSI_diff",
+                 n_cores = 5
                )
              }),
 
@@ -175,7 +183,7 @@ list(
                st_extract(data_sea_level, data_CIVI_Sites) |>
                  as.data.frame() |>
                  mutate(Value = as.numeric(ssp245_rslc_p50),
-                        Score = cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5),
+                        Score = as.numeric(cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5)),
                         HarbourCode = data_CIVI_Sites$HarbourCode) |>  #TODO document that the Values are in cm
                  select(HarbourCode,Value,Score)
              }),
@@ -185,7 +193,7 @@ list(
                st_extract(data_ice_days, data_CIVI_Sites)|>
                  as.data.frame() |>
                  mutate(Value = as.numeric(mean),
-                        Score = cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5),
+                        Score = as.numeric(cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5)),
                         HarbourCode = data_CIVI_Sites$HarbourCode) |>  #TODO document that the Values are in days
                  select(HarbourCode,Value,Score)
 
@@ -197,7 +205,7 @@ list(
                  mutate(HarbourCode = `Harb Code`) |>
                  group_by(HarbourCode) |>
                  reframe(Value = sum(`Facility Replacement Cost`, na.rm=TRUE)) |>
-                 mutate(Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5)) |>
+                 mutate(Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5))) |>
                  select(HarbourCode,Value,Score)
              }),
 
@@ -206,7 +214,7 @@ list(
                data_CIVI_HarbourCondition |>
                  mutate(HarbourCode = `Harb Code`,
                         Value = as.numeric(`Harbour Utilization`),
-                        Score = cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5)) |>
+                        Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5))) |>
                  select(HarbourCode,Value,Score)
              }),
 
@@ -226,40 +234,33 @@ list(
              command={
                list(ind_coastal_sensitivity_index = ind_coastal_sensitivity_index,
                     ind_harbour_condition = ind_harbour_condition) |>
-                 imap(function(df, name) {
-                   df |>
-                     rename(!!paste0(name, "_Value") := Value,
-                            !!paste0(name, "_Score") := Score)
-                 }) |>
-                 reduce(full_join, by = "HarbourCode") |>
+                 join_comps() |>
                  rowwise() |>
                  mutate(sensitivity = geometricMean(
                    c(ind_coastal_sensitivity_index_Score,
                      abs(6-ind_harbour_condition_Score))))
-             }),
+             },
+             tidy_eval = FALSE),
 
   tar_target(comp_exposure,
              command={
                list(ind_sea_level_change = ind_sea_level_change,
                     ind_ice_day_change = ind_ice_day_change) |>
-                 imap(function(df, name) {
-                   df |>
-                     rename(!!paste0(name, "_Value") := Value,
-                            !!paste0(name, "_Score") := Score)
-                 }) |>
-                 reduce(full_join, by = "HarbourCode") |>
+                 join_comps() |>
                  rowwise() |>
                  mutate(exposure = geometricMean(
                    c(ind_sea_level_change_Score,
                      ind_ice_day_change_Score)))
 
 
-             }),
+             },
+             tidy_eval = FALSE),
 
   tar_target(comp_adaptive_capacity,
              command={
                list(ind_replacement_cost = ind_replacement_cost,
                     ind_harbour_utilization = ind_harbour_utilization,
+<<<<<<< HEAD
                     ind_sch_proximity = ind_sch_proximity) |>
                  imap(function(df, name) {
                    df |>
@@ -267,12 +268,22 @@ list(
                             !!paste0(name, "_Score") := Score)
                  }) |>
                  reduce(full_join, by = "HarbourCode") |>
+=======
+                    ind_proximity = ind_proximity) |>
+                 join_comps() |>
+>>>>>>> f579d983020c39161158fefa51bd6946ed5cb666
                  rowwise() |>
                  mutate(adaptive_capacity = geometricMean(
                    c(abs(6-ind_replacement_cost_Score),
                      abs(6-ind_harbour_utilization_Score),
+<<<<<<< HEAD
                      ind_sch_proximity_Score)))
              }),
+=======
+                     ind_proximity_Score)))
+             },
+             tidy_eval = FALSE),
+>>>>>>> f579d983020c39161158fefa51bd6946ed5cb666
 
   # CIVI
 

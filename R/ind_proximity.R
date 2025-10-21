@@ -79,7 +79,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
 
   # Function to get 2 nearest neighbours (based on sailing)
-  for (i in seq_along(sch_df$HarbourName)) {
+  for (i in seq_along(sch_df$HarbourName[1:50])) {
     message(paste0("i = ", i))
     origin_lat <- sch_df$Lat[i]
     origin_lon <- sch_df$Long[i]
@@ -219,7 +219,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
           # Create leaflet map
           #title_text <- if (snap_flag) "Snap to water applied" else "Sailing route not altered"
-          title_text <- "sailing route"
+          title_text <= "sailing route"
           ggp  <- leaflet() %>%
             addTiles() %>%
             # Add sailing route
