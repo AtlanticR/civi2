@@ -11,10 +11,12 @@ pkgs <- c("AtlanticR/civi2",
           "future.apply",
           "dplyr",
           "purrr",
+          "crew",
           "leaflet")
 shelf(pkgs)
 tar_option_set(packages = basename(pkgs),
-               error = "continue")
+               error = "continue",
+               controller = crew_controller_local(workers = 3))
 
 # Set the store path for targets
 if(dir.exists("//wpnsbio9039519.mar.dfo-mpo.ca/sambashare/CIVI/civi2")){
@@ -144,7 +146,7 @@ list(
                  name_sites = "HarbourCode",
                  sfLines = data_CANCOAST_CSI_V2_5_6,
                  name_sfLines_variable = "CSI_diff",
-                 n_cores = 10,
+                 n_cores = 7,
                  max_size = 10000*1024^2
 
                )

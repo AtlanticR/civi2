@@ -219,7 +219,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
           # Create leaflet map
           #title_text <- if (snap_flag) "Snap to water applied" else "Sailing route not altered"
-          title_text <= "sailing route"
+          title_text <- "sailing route"
           ggp  <- leaflet() %>%
             addTiles() %>%
             # Add sailing route
