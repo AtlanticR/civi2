@@ -79,7 +79,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
 
   # Function to get 2 nearest neighbours (based on sailing)
-  for (i in seq_along(sch_df$HarbourName[1:50])) {
+  for (i in seq_along(sch_df$HarbourName)) {
     message(paste0("i = ", i))
     origin_lat <- sch_df$Lat[i]
     origin_lon <- sch_df$Long[i]
@@ -321,7 +321,6 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
           driving_output[[i]]$plot[[j]] <- map
         } else {
-          #browser()
           driving_output[[i]]$plot[[j]] <- 1
 
         }
@@ -384,6 +383,11 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
     ind_proximety_short$Value[i] <- NA
   }
   }
+
+
+
+  #browser()
+
 
   # Score
   ind_proximety_short$Score <- cut(as.vector(transformSkewness(ind_proximety_short$Value)), breaks=5, labels=1:5)
