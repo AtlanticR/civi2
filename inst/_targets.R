@@ -285,6 +285,159 @@ list(
              },
              tidy_eval = FALSE),
 
+
+  # Contextual Indicators
+
+  tar_target(context_ind_csd,
+             command={
+               # NOTE THIS IS A STATISTIC CANADA SHAPE FILE FOR CSDNAME (google 2025 sub division shape files census)
+               csd <- st_read(list.files(file.path(store, "data"), pattern="*shp",full.names = TRUE))
+               csd <- st_transform(csd, 4326)
+               csd <- st_make_valid(csd)
+               y_sf <- st_as_sf(data_CIVI_Sites, coords = c("Long", "Lat"), crs = 4326)  # WGS84
+               matched_csd <- character(nrow(y_sf))
+               names_csd <- character(nrow(y_sf))
+
+               # 4. For loop to find which polygon each point falls in
+               y_sf$CSD_Shape <- NA
+               for(i in seq_len(nrow(y_sf))) {
+                 message(i)
+                 pt <- y_sf[i, ]
+                 inside <- st_contains(csd, pt, sparse = FALSE)
+                 matched_csd[i] <- csd$CSDUID[inside]
+                 names_csd[i] <- csd$CSDNAME[inside]
+                 y_sf$CSD_Shape[i] <- csd$geometry[inside]
+               }
+               y_sf$CSDUID <- matched_csd
+               y_sf$CSDName <- names_csd
+
+               df <- data.frame("HarbourCode"=data_CIVI_Sites$HarbourCode, CSDUID=matched_csd, CSDName=names_csd, CSD_shape=y_sf$CSD_Shape)
+               df
+
+
+             }),
+
+  tar_target(context_ind_population,
+             command = {
+               # Population
+               tmp <- tempfile()
+               download.file("https://www150.statcan.gc.ca/n1/tbl/csv/17100155-eng.zip",tmp)
+               unzip_dir <- tempdir() # Temporary directory for extracted files
+               unzip(tmp, exdir = unzip_dir)
+               extracted_files <- list.files(unzip_dir, full.names = TRUE)
+               pop <- read.csv("/tmp/RtmppLk1zk/17100155.csv") #"/tmp/RtmppLk1zk/17100155.csv"
+
+               # Last 7 digits of pop DGUID are CSDUID
+               y <- data_CIVI_Sites
+               popNew <- NULL
+               for (i in seq_along(data_CIVI_Sites$HarbourCode)) {
+                 message(i)
+                 if (!(is.na(y$CSDUID[i]))) {
+                   keep <- pop[which(grepl(y$CSDUID[i], pop$DGUID) ),]
+                   if (!(length(keep$REF_DATE)  == 0)) {
+                     popNew[[i]] <- keep$VALUE[which(keep$REF_DATE == max(keep$REF_DATE, na.rm=TRUE))]
+                     message(paste0("i = ", i , " and keep = ", keep$VALUE[which(keep$REF_DATE == max(keep$REF_DATE, na.rm=TRUE))]))
+                   } else {
+                     popNew[[i]] <- NA
+                   }
+                 } else {
+                   popNew[[i]] <- NA
+                 }
+               }
+
+
+               popNew <- unlist(popNew)
+               y$Pop <- popNew
+               df <- data.frame("HarbourCode"=y$HarbourCode, "ind_population"=popNew)
+               df
+
+             }),
+
+  tar_target(context_ind_fishery_reliant_communities,
+             command={
+               # 20%
+               y <- context_ind_csd
+               frc <- read_excel(file.path(store, "data", "DFO_FishingCommunities_FinalDatabase_2015-2017.xlsx"))
+               fishery <- NULL
+               for (i in seq_along(y$CSDUID)) {
+                 message(i)
+                 fr_keep <- frc[which(frc$CSDcode == y$CSDUID[i]),]
+                 if (!(length(fr_keep$Year) == 0)) {
+                   fish_reliant <- fr_keep$FishingRel[which(as.numeric(fr_keep$Year) == max(as.numeric(fr_keep$Year)))]
+
+                   if(fish_reliant %in% c("X", "Non-Reliant", "10-20")) {
+                     output <- "Non-Reliant"
+                   } else {
+                     output <- "Reliant"
+                   }
+                 } else {
+                   output <- NA
+                 }
+
+                 fishery[i] <- output
+               }
+
+               df <- data.frame("HarbourCode"=y$HarbourCode, "ind_fishery_reliant_communities"=fishery)
+             }),
+
+  tar_target(context_ind_indigenous_community,
+             command =
+               {
+
+                 url <- "https://geo.sac-isc.gc.ca/geomatics/rest/services/Donnees_Ouvertes-Open_Data/Premiere_Nation_First_Nation/MapServer/0/query"
+                 params <- list(
+                   where = "1=1",           # Select all features
+                   outFields = "*",         # All fields
+                   f = "geojson"            # Format GeoJSON
+                 )
+                 query_url <- paste0(url, "?", paste0(names(params), "=", params, collapse = "&"))
+                 data_sf_fn <- st_read(query_url)
+                 df_fn <- data_sf_fn[,c("BAND_NAME", "geometry")]
+                 df_fn$community <- "First Nations"
+                 names(df_fn) <- c("NAME", "geometry", "community")
+
+                 # Get Inuit Community Data
+                 inuit_url <- "https://geo.sac-isc.gc.ca/geomatics/rest/services/Donnees_Ouvertes-Open_Data/Communaute_inuite_Inuit_Community/MapServer/0/query"
+
+                 # Query parameters for GeoJSON
+                 inuit_params <- list(
+                   where = "1=1",        # get all features
+                   outFields = "*",      # all attributes
+                   f = "geojson"         # request GeoJSON format
+                 )
+
+                 # Construct full query URL
+                 inuit_query_url <- paste0(inuit_url, "?", paste0(names(inuit_params), "=", inuit_params, collapse = "&"))
+
+                 # Read into an sf object
+                 data_sf_inuit <- st_read(inuit_query_url)
+                 df_inuit <- data_sf_inuit[,c("NAME", "geometry")]
+                 df_inuit$community <- "Inuit"
+
+
+
+                 DF <- rbind(df_fn, df_inuit)
+                 y <- context_ind_csd
+                 ## Census communities
+                 IDs <- y$CSDUID
+                 results <- data.frame(
+                   ID = IDs,
+                   n_communities = NA_integer_
+                 )
+
+                 for (i in seq_along(IDs)) {
+                   message(i)
+                   geom <- y$CSD_Shape[[i]]       # get i-th MULTIPOLYGON
+                   inside <- st_within(DF, geom, sparse = FALSE)  # spatial check
+                   y$indigenous_communities[i] <- sum(inside)  # count points TRUE/FALSE
+                 }
+
+                 df <- data.frame("HarbourCode"=y$HarbourCode, "ind_indigenous_community"=y$indigenous_communities)
+                 df
+
+
+               }),
+
   # CIVI
 
   tar_target(CIVI,
@@ -316,12 +469,10 @@ list(
                  left_join(data_CIVI_Sites %>% select(HarbourCode, Zone),
                            by = "HarbourCode") %>%
                  rename(SCH_region = Zone) %>%
-                 mutate("CSDUID"=NA) %>%
-                 mutate("CSDName"=NA) %>%
-                 mutate("Pop"=NA) %>%
-                 mutate("fishery_reliant_communities" = NA) %>%
-                 mutate("indigenous_communities"=NA)
-
+                 full_join(context_ind_csd, by="HarbourCode") %>%
+                 full_join(context_ind_population, by="HarbourCode") %>%
+                 full_join(context_ind_fishery_reliant_communities, by="HarbourCode") %>%
+                 full_join(context_ind_indigenous_community, by="HarbourCode")
                # Turn Province names into acronyms
                full_names <- unique(data_CIVI_Sites$Province)
 
@@ -354,131 +505,7 @@ list(
                  y$Province[which(y$Province == full_names[i])] <- ac
                }
 
-               # NOTE THIS IS A STATISTIC CANADA SHAPE FILE FOR CSDNAME (google 2025 sub division shape files census)
-               csd <- st_read(list.files(file.path(store, "data"), pattern="*shp",full.names = TRUE))
-               csd <- st_transform(csd, 4326)
-               csd <- st_make_valid(csd)
-               y_sf <- st_as_sf(y, coords = c("Long", "Lat"), crs = 4326)  # WGS84
-               matched_csd <- character(nrow(y_sf))
-               names_csd <- character(nrow(y_sf))
-
-               # 4. For loop to find which polygon each point falls in
-               y$CSD_Shape <- NA
-               for(i in seq_len(nrow(y_sf))) {
-                 message(i)
-                 pt <- y_sf[i, ]
-                 inside <- st_contains(csd, pt, sparse = FALSE)
-                 matched_csd[i] <- csd$CSDUID[inside]
-                 names_csd[i] <- csd$CSDNAME[inside]
-                 y$CSD_Shape[i] <- csd$geometry[inside]
-               }
-               y$CSDUID <- matched_csd
-               y$CSDName <- names_csd
-
-           # Population
-               tmp <- tempfile()
-               download.file("https://www150.statcan.gc.ca/n1/tbl/csv/17100155-eng.zip",tmp)
-               unzip_dir <- tempdir() # Temporary directory for extracted files
-               unzip(tmp, exdir = unzip_dir)
-               extracted_files <- list.files(unzip_dir, full.names = TRUE)
-               pop <- read.csv("/tmp/RtmppLk1zk/17100155.csv") #"/tmp/RtmppLk1zk/17100155.csv"
-
-               # Last 7 digits of pop DGUID are CSDUID
-               popNew <- NULL
-               for (i in seq_along(df$HarbourCode)) {
-                 message(i)
-                 if (!(is.na(y$CSDUID[i]))) {
-                 keep <- pop[which(grepl(y$CSDUID[i], pop$DGUID) ),]
-                 if (!(length(keep$REF_DATE)  == 0)) {
-                 popNew[[i]] <- keep$VALUE[which(keep$REF_DATE == max(keep$REF_DATE, na.rm=TRUE))]
-                 message(paste0("i = ", i , " and keep = ", keep$VALUE[which(keep$REF_DATE == max(keep$REF_DATE, na.rm=TRUE))]))
-                 } else {
-                 popNew[[i]] <- NA
-                 }
-                 } else {
-                   popNew[[i]] <- NA
-                 }
-               }
-
-
-               popNew <- unlist(popNew)
-               y$Pop <- popNew
-
-
-              # "fishery_reliant_communities"
-               # 20%
-               ## FIXME: Who sent us this
-               frc <- read_excel(file.path(store, "data", "DFO_FishingCommunities_FinalDatabase_2015-2017.xlsx"))
-               for (i in seq_along(y$CSDUID)) {
-                 message(i)
-                 fr_keep <- frc[which(frc$CSDcode == y$CSDUID[i]),]
-                 if (!(length(fr_keep$Year) == 0)) {
-                 fish_reliant <- fr_keep$FishingRel[which(as.numeric(fr_keep$Year) == max(as.numeric(fr_keep$Year)))]
-
-                 if(fish_reliant %in% c("X", "Non-Reliant", "10-20")) {
-                   output <- "Non-Reliant"
-                 } else {
-                   output <- "Reliant"
-                 }
-                 } else {
-                   output <- NA
-                 }
-
-                 y$fishery_reliant_communities[i] <- output
-               }
-
-
-
-
-              # "indigenous_communities"
-
-               url <- "https://geo.sac-isc.gc.ca/geomatics/rest/services/Donnees_Ouvertes-Open_Data/Premiere_Nation_First_Nation/MapServer/0/query"
-               params <- list(
-                 where = "1=1",           # Select all features
-                 outFields = "*",         # All fields
-                 f = "geojson"            # Format GeoJSON
-               )
-               query_url <- paste0(url, "?", paste0(names(params), "=", params, collapse = "&"))
-               data_sf_fn <- st_read(query_url)
-               df_fn <- data_sf_fn[,c("BAND_NAME", "geometry")]
-               df_fn$community <- "First Nations"
-               names(df_fn) <- c("NAME", "geometry", "community")
-
-               # Get Inuit Community Data
-               inuit_url <- "https://geo.sac-isc.gc.ca/geomatics/rest/services/Donnees_Ouvertes-Open_Data/Communaute_inuite_Inuit_Community/MapServer/0/query"
-
-               # Query parameters for GeoJSON
-               inuit_params <- list(
-                 where = "1=1",        # get all features
-                 outFields = "*",      # all attributes
-                 f = "geojson"         # request GeoJSON format
-               )
-
-               # Construct full query URL
-               inuit_query_url <- paste0(inuit_url, "?", paste0(names(inuit_params), "=", inuit_params, collapse = "&"))
-
-               # Read into an sf object
-               data_sf_inuit <- st_read(inuit_query_url)
-               df_inuit <- data_sf_inuit[,c("NAME", "geometry")]
-               df_inuit$community <- "Inuit"
-
-
-
-               DF <- rbind(df_fn, df_inuit)
-
-               ## Census communities
-               IDs <- y$CSDUID
-               results <- data.frame(
-                 ID = IDs,
-                 n_communities = NA_integer_
-               )
-
-               for (i in seq_along(IDs)) {
-                 message(i)
-                 geom <- y$CSD_Shape[[i]]       # get i-th MULTIPOLYGON
-                 inside <- st_within(DF, geom, sparse = FALSE)  # spatial check
-                 y$indigenous_communities[i] <- sum(inside)  # count points TRUE/FALSE
-               }
+               y
 
              })
 
