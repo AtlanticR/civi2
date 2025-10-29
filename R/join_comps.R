@@ -4,6 +4,9 @@
 #'
 #' @param x named list of indicator data.frames. The name of the data.frame in the list will be used as a prefix for the Value and Score columns. All data.frames must have a HarbourCode,Value, and Score columns.
 #'
+#' @importFrom purrr imap reduce
+#' @importFrom dplyr rename full_join
+#'
 #' @returns A single data.frame with HarbourCode and the renamed Value and Score columns from each indicator data.frame, prefixed by the indicator name.
 #' @export
 #'
