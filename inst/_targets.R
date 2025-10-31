@@ -505,7 +505,8 @@ list(
                  y$Province[which(y$Province == full_names[i])] <- ac
                }
 
-               y
+               y |>
+                       filter(-CSD_Shape)
 
              })
 
