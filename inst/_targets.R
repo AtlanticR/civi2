@@ -159,7 +159,7 @@ list(
   tar_target(ind_coastal_sensitivity_index,
              command={
                data_CSIScore_Intersection |>
-                 mutate(HarbourCode = as.numeric(harbourCode),
+                 mutate(HarbourCode = as.numeric(HarbourCode),
                         Value = weighted.mean.CSI_diff,
                         Score=as.numeric(cut(Value,breaks=5, labels=1:5)))|>
                  select(HarbourCode,Value,Score)
@@ -253,7 +253,7 @@ list(
                  mutate(sensitivity = geometricMean(
                    c(ind_coastal_sensitivity_index_Score,
                      abs(6-ind_harbour_condition_Score),
-                     ind_degree_of_protection)))
+                     ind_degree_of_protection_Score)))
              },
              tidy_eval = FALSE),
 
@@ -291,28 +291,19 @@ list(
   tar_target(context_ind_csd,
              command={
                # NOTE THIS IS A STATISTIC CANADA SHAPE FILE FOR CSDNAME (google 2025 sub division shape files census)
-               csd <- st_read(list.files(file.path(store, "data"), pattern="*shp",full.names = TRUE))
-               csd <- st_transform(csd, 4326)
-               csd <- st_make_valid(csd)
-               y_sf <- st_as_sf(data_CIVI_Sites, coords = c("Long", "Lat"), crs = 4326)  # WGS84
-               matched_csd <- character(nrow(y_sf))
-               names_csd <- character(nrow(y_sf))
+               csd <- st_read(list.files(file.path(store, "data"), pattern="*shp",full.names = TRUE)) |>
+                 st_transform(4326) |>
+                 st_make_valid()
 
-               # 4. For loop to find which polygon each point falls in
-               y_sf$CSD_Shape <- NA
-               for(i in seq_len(nrow(y_sf))) {
-                 message(i)
-                 pt <- y_sf[i, ]
-                 inside <- st_contains(csd, pt, sparse = FALSE)
-                 matched_csd[i] <- csd$CSDUID[inside]
-                 names_csd[i] <- csd$CSDNAME[inside]
-                 y_sf$CSD_Shape[i] <- csd$geometry[inside]
-               }
-               y_sf$CSDUID <- matched_csd
-               y_sf$CSDName <- names_csd
-
-               df <- data.frame("HarbourCode"=data_CIVI_Sites$HarbourCode, CSDUID=matched_csd, CSDName=names_csd, CSD_shape=y_sf$CSD_Shape)
-               df
+               csd |>
+                 rename(CSDName = CSDNAME) |>
+                 dplyr::select(CSDUID,CSDName) |>
+                 st_intersection(data_CIVI_Sites) |>
+                 as.data.frame() |>
+                 select(-geometry) |>
+                 left_join(dplyr::select(csd,CSDUID), by = "CSDUID") |>
+                 as.data.frame() |>
+                 select(HarbourCode, CSDUID, CSDName, CSD_Shape = geometry)
 
 
              }),
@@ -324,11 +315,10 @@ list(
                download.file("https://www150.statcan.gc.ca/n1/tbl/csv/17100155-eng.zip",tmp)
                unzip_dir <- tempdir() # Temporary directory for extracted files
                unzip(tmp, exdir = unzip_dir)
-               extracted_files <- list.files(unzip_dir, full.names = TRUE)
-               pop <- read.csv("/tmp/RtmppLk1zk/17100155.csv") #"/tmp/RtmppLk1zk/17100155.csv"
+               pop <- read.csv(file.path(unzip_dir,"17100155.csv"))
 
                # Last 7 digits of pop DGUID are CSDUID
-               y <- data_CIVI_Sites
+               y <- context_ind_csd
                popNew <- NULL
                for (i in seq_along(data_CIVI_Sites$HarbourCode)) {
                  message(i)
@@ -452,9 +442,7 @@ list(
                      abs(6-adaptive_capacity))))
 
                y <- x %>%
-                 left_join(data_CIVI_Sites %>% select(HarbourCode, HarbourName),
-                           by = "HarbourCode") %>%
-                 left_join(data_CIVI_Sites %>% select(HarbourCode, Province),
+                 left_join(data_CIVI_Sites %>% dplyr::select(HarbourCode, HarbourName, Province),
                            by = "HarbourCode") %>%
                  mutate("HarbourType"=NA) %>%
                  mutate(MarineInLand = if_else(
@@ -462,11 +450,7 @@ list(
                    "InLand",
                    "Marine"
                  )) %>%
-                 left_join(data_CIVI_Sites %>% select(HarbourCode, Lat),
-                           by = "HarbourCode") %>%
-                 left_join(data_CIVI_Sites %>% select(HarbourCode, Long),
-                           by = "HarbourCode") %>%
-                 left_join(data_CIVI_Sites %>% select(HarbourCode, Zone),
+                 left_join(data_CIVI_Sites %>% dplyr::select(HarbourCode, Lat, Long, Zone),
                            by = "HarbourCode") %>%
                  rename(SCH_region = Zone) %>%
                  full_join(context_ind_csd, by="HarbourCode") %>%
