@@ -490,7 +490,7 @@ list(
                }
 
                y |>
-                       filter(-CSD_Shape)
+                 dplyr::select(-CSD_Shape)
 
              })
 
