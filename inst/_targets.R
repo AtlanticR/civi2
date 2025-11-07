@@ -350,7 +350,8 @@ list(
   tar_target(context_ind_fishery_reliant_communities,
              command={
                fishingcomm <- read_excel(file.path(path_to_store(), "data", "DFO_CSBP_FishingCommunities_Final_2022.xlsx")) |>
-                 mutate(CSDUID = as.character(CSDcode))
+                 mutate(CSDUID = as.character(CSDcode),
+                        ind_fishery_reliant_communities = FishingRel)
 
                test <- context_ind_csd |>
                  as.data.frame() |>
