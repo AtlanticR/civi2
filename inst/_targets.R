@@ -174,7 +174,7 @@ list(
                data_CIVI_HarbourCondition |>
                  mutate(HarbourCode = `Harb Code`,
                         Value = as.numeric(`Harb Condition`),
-                        Score = Value)|>
+                        Score = as.numeric(cut(Value,breaks=5, labels=1:5)))|>
                  select(HarbourCode,Value,Score)
              }),
 
