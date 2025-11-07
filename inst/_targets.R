@@ -145,7 +145,8 @@ list(
   tar_target(data_CSIScore_Intersection,
              command = {
                future_siteBufferToMultiLineIntersection(
-                 sites = data_CIVI_Sites,
+                 sites = data_CIVI_Sites |>
+                   filter(HarbourCode %in% ind_degree_of_protection$HarbourCode[!is.na(ind_degree_of_protection$Value)]),
                  name_sites = "HarbourCode",
                  sfLines = data_CANCOAST_CSI_V2_5_6,
                  name_sfLines_variable = "CSI_diff",
@@ -162,7 +163,6 @@ list(
   tar_target(ind_coastal_sensitivity_index,
              command={
                data_CSIScore_Intersection |>
-                 filter(HarbourCode %in% ind_degree_of_protection$HarbourCode[!is.na(ind_degree_of_protection$Value)])
                  mutate(HarbourCode = as.numeric(HarbourCode),
                         Value = weighted.mean.CSI_diff,
                         Score=as.numeric(cut(Value,breaks=5, labels=1:5)))|>
