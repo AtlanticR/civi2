@@ -145,8 +145,7 @@ list(
   tar_target(data_CSIScore_Intersection,
              command = {
                future_siteBufferToMultiLineIntersection(
-                 sites = data_CIVI_Sites |>
-                   filter(HarbourCode %in% ind_degree_of_protection$HarbourCode[!is.na(ind_degree_of_protection$Value)]),
+                 sites = data_CIVI_Sites[data_CIVI_Sites$HarbourCode %in% ind_degree_of_protection$HarbourCode[!is.na(ind_degree_of_protection$Value)],],
                  name_sites = "HarbourCode",
                  sfLines = data_CANCOAST_CSI_V2_5_6,
                  name_sfLines_variable = "CSI_diff",
