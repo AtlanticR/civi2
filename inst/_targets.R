@@ -345,29 +345,14 @@ list(
 
   tar_target(context_ind_fishery_reliant_communities,
              command={
-               # 20%
-               y <- context_ind_csd
-               frc <- read_excel(file.path(store, "data", "DFO_FishingCommunities_FinalDatabase_2015-2017.xlsx"))
-               fishery <- NULL
-               for (i in seq_along(y$CSDUID)) {
-                 message(i)
-                 fr_keep <- frc[which(frc$CSDcode == y$CSDUID[i]),]
-                 if (!(length(fr_keep$Year) == 0)) {
-                   fish_reliant <- fr_keep$FishingRel[which(as.numeric(fr_keep$Year) == max(as.numeric(fr_keep$Year)))]
+               fishingcomm <- read_excel(file.path(store, "data", "DFO_CSBP_FishingCommunities_Final_2022.xlsx")) |>
+                 mutate(CSDUID = as.character(CSDcode))
 
-                   if(fish_reliant %in% c("X", "Non-Reliant", "10-20")) {
-                     output <- "Non-Reliant"
-                   } else {
-                     output <- "Reliant"
-                   }
-                 } else {
-                   output <- NA
-                 }
-
-                 fishery[i] <- output
-               }
-
-               df <- data.frame("HarbourCode"=y$HarbourCode, "ind_fishery_reliant_communities"=fishery)
+               test <- context_ind_csd |>
+                 as.data.frame() |>
+                 left_join(fishingcomm,
+                           by = "CSDUID") |>
+                 select(HarbourCode, ind_fishery_reliant_communities)
              }),
 
   tar_target(context_ind_indigenous_community,
