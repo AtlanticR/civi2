@@ -482,6 +482,14 @@ list(
                y |>
                  dplyr::select(-CSD_Shape)
 
+             }),
+
+  tar_target(CIVI.csv,
+             command = {
+               write.csv(CIVI |>
+                           dplyr::select(-geometry.x,-geometry.y),
+                         file.path(dirname(path_to_store(),"data","CIVI.csv")),
+                         row.names = FALSE)
              })
 
 )
