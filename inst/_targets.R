@@ -41,7 +41,7 @@ list(
   tar_target(data_CIVI_Sites,
              command={
                # file from Yanice Berkane (SCH)
-               file <- read_excel(file.path(path_to_store(), "data", "2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx")) |>
+               file <- read_excel(file.path(dirname(path_to_store()), "data", "2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx")) |>
                  filter(!is.na(Latitude) & !is.na(Longitude))
 
                x <- data.frame(HarbourCode=file$`Harb Code`, HarbourName=file$`Harb Name`, Administration=file$`Harb Responsibility`, Province=file$`Harbour Province Name`,
@@ -71,13 +71,13 @@ list(
   tar_target(data_CIVI_ReplacementCost,
              command={
                # file from Annie Boudreau (SCH)
-               read_excel(file.path(path_to_store(), "data", "2025-08-05 - CIVI Replacement Cost.xlsx"))
+               read_excel(file.path(dirname(path_to_store()), "data", "2025-08-05 - CIVI Replacement Cost.xlsx"))
              }),
 
   tar_target(data_CIVI_HarbourCondition,
              command={
                # file from Annie Boudreau (SCH)
-               read_excel(file.path(path_to_store(), "data", "2025-08-05 - CIVI Harbour Condition use and capacity.xlsx"))
+               read_excel(file.path(dirname(path_to_store()), "data", "2025-08-05 - CIVI Harbour Condition use and capacity.xlsx"))
              }),
 
 
@@ -123,7 +123,7 @@ list(
                }
 
                # unzip
-               cancoast <- file.path(path_to_store(),
+               cancoast <- file.path(dirname(path_to_store()),
                                      "data",
                                      "cancoast")
                if(!dir.exists(cancoast)){
@@ -180,7 +180,7 @@ list(
 
   tar_target(ind_degree_of_protection,
              command={
-               x <- read_excel(file.path(path_to_store(), "data", "DoP.xlsx"))
+               x <- read_excel(file.path(dirname(path_to_store()), "data", "DoP.xlsx"))
 
                df <- data.frame(HarbourCode=data_CIVI_Sites$HarbourCode, "Value"=NA, "Score"=NA)
 
@@ -237,12 +237,12 @@ list(
 
   tar_target(ind_sch_proximity,
              command={
-                ind_proximity(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=read.table(file.path(path_to_store(),"data","ors_api_key.txt"))$V1, full_results=FALSE)
+                ind_proximity(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=read.table(file.path(dirname(path_to_store()),"data","ors_api_key.txt"))$V1, full_results=FALSE)
              }),
 
   tar_target(ind_proximity_full_debug,
              command={
-               ind_proximity(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=read.table(file.path(path_to_store(),"data","ors_api_key.txt"))$V1, full_results=TRUE)
+               ind_proximity(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=read.table(file.path(dirname(path_to_store()),"data","ors_api_key.txt"))$V1, full_results=TRUE)
              }),
 
 
@@ -295,7 +295,7 @@ list(
   tar_target(context_ind_csd,
              command={
                # NOTE THIS IS A STATISTIC CANADA SHAPE FILE FOR CSDNAME (google 2025 sub division shape files census)
-               csd <- st_read(list.files(file.path(path_to_store(), "data"), pattern="*shp",full.names = TRUE)) |>
+               csd <- st_read(list.files(file.path(dirname(path_to_store()), "data"), pattern="*shp",full.names = TRUE)) |>
                  st_transform(4326) |>
                  st_make_valid()
 
@@ -349,7 +349,7 @@ list(
 
   tar_target(context_ind_fishery_reliant_communities,
              command={
-               fishingcomm <- read_excel(file.path(path_to_store(), "data", "DFO_CSBP_FishingCommunities_Final_2022.xlsx")) |>
+               fishingcomm <- read_excel(file.path(dirname(path_to_store()), "data", "DFO_CSBP_FishingCommunities_Final_2022.xlsx")) |>
                  mutate(CSDUID = as.character(CSDcode),
                         ind_fishery_reliant_communities = FishingRel)
 
@@ -488,7 +488,7 @@ list(
              command = {
                write.csv(CIVI |>
                            dplyr::select(-geometry.x,-geometry.y),
-                         file.path(dirname(path_to_store(),"data","CIVI.csv")),
+                         file.path(dirname(path_to_store()),"data","CIVI.csv"),
                          row.names = FALSE)
              })
 
