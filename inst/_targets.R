@@ -19,16 +19,19 @@ tar_option_set(packages = basename(pkgs),
                controller = crew_controller_local(workers = 3))
 
 # Set the store path for targets
-if(dir.exists("//wpnsbio9039519.mar.dfo-mpo.ca/sambashare/CIVI/civi2")){
-  store = "//wpnsbio9039519.mar.dfo-mpo.ca/sambashare/CIVI/civi2"
-} else if(dir.exists("/srv/sambashare/CIVI/civi2")){
-  store = "/srv/sambashare/CIVI/civi2"
-} else {
-  warning("CIVI data store not found. Please check the directory paths.")
-  store = getwd()
+path_to_store <- function(){
+  if(dir.exists("//wpnsbio9039519.mar.dfo-mpo.ca/sambashare/CIVI/civi2")){
+    store = "//wpnsbio9039519.mar.dfo-mpo.ca/sambashare/CIVI/civi2"
+  } else if(dir.exists("/srv/sambashare/CIVI/civi2")){
+    store = "/srv/sambashare/CIVI/civi2"
+  } else {
+    warning("CIVI data store not found. Please check the directory paths.")
+    store = getwd()
+  }
+  return(store)
 }
 
-tar_config_set(store = store)
+tar_config_set(store = path_to_store())
 
 
 
@@ -38,7 +41,7 @@ list(
   tar_target(data_CIVI_Sites,
              command={
                # file from Yanice Berkane (SCH)
-               file <- read_excel(file.path(store, "data", "2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx")) |>
+               file <- read_excel(file.path(path_to_store(), "data", "2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx")) |>
                  filter(!is.na(Latitude) & !is.na(Longitude))
 
                x <- data.frame(HarbourCode=file$`Harb Code`, HarbourName=file$`Harb Name`, Administration=file$`Harb Responsibility`, Province=file$`Harbour Province Name`,
@@ -68,13 +71,13 @@ list(
   tar_target(data_CIVI_ReplacementCost,
              command={
                # file from Annie Boudreau (SCH)
-               read_excel(file.path(store, "data", "2025-08-05 - CIVI Replacement Cost.xlsx"))
+               read_excel(file.path(path_to_store(), "data", "2025-08-05 - CIVI Replacement Cost.xlsx"))
              }),
 
   tar_target(data_CIVI_HarbourCondition,
              command={
                # file from Annie Boudreau (SCH)
-               read_excel(file.path(store, "data", "2025-08-05 - CIVI Harbour Condition use and capacity.xlsx"))
+               read_excel(file.path(path_to_store(), "data", "2025-08-05 - CIVI Harbour Condition use and capacity.xlsx"))
              }),
 
 
@@ -120,7 +123,7 @@ list(
                }
 
                # unzip
-               cancoast <- file.path(store,
+               cancoast <- file.path(path_to_store(),
                                      "data",
                                      "cancoast")
                if(!dir.exists(cancoast)){
@@ -159,6 +162,7 @@ list(
   tar_target(ind_coastal_sensitivity_index,
              command={
                data_CSIScore_Intersection |>
+                 filter(HarbourCode %in% ind_degree_of_protection$HarbourCode[!is.na(ind_degree_of_protection$Value)])
                  mutate(HarbourCode = as.numeric(HarbourCode),
                         Value = weighted.mean.CSI_diff,
                         Score=as.numeric(cut(Value,breaks=5, labels=1:5)))|>
@@ -176,7 +180,7 @@ list(
 
   tar_target(ind_degree_of_protection,
              command={
-               x <- read_excel(file.path(store, "data", "DoP.xlsx"))
+               x <- read_excel(file.path(path_to_store(), "data", "DoP.xlsx"))
 
                df <- data.frame(HarbourCode=data_CIVI_Sites$HarbourCode, "Value"=NA, "Score"=NA)
 
@@ -233,12 +237,12 @@ list(
 
   tar_target(ind_sch_proximity,
              command={
-                ind_proximity(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=read.table(file.path(store,"data","ors_api_key.txt"))$V1, full_results=FALSE)
+                ind_proximity(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=read.table(file.path(path_to_store(),"data","ors_api_key.txt"))$V1, full_results=FALSE)
              }),
 
   tar_target(ind_proximity_full_debug,
              command={
-               ind_proximity(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=read.table(file.path(store,"data","ors_api_key.txt"))$V1, full_results=TRUE)
+               ind_proximity(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=read.table(file.path(path_to_store(),"data","ors_api_key.txt"))$V1, full_results=TRUE)
              }),
 
 
@@ -291,7 +295,7 @@ list(
   tar_target(context_ind_csd,
              command={
                # NOTE THIS IS A STATISTIC CANADA SHAPE FILE FOR CSDNAME (google 2025 sub division shape files census)
-               csd <- st_read(list.files(file.path(store, "data"), pattern="*shp",full.names = TRUE)) |>
+               csd <- st_read(list.files(file.path(path_to_store(), "data"), pattern="*shp",full.names = TRUE)) |>
                  st_transform(4326) |>
                  st_make_valid()
 
@@ -345,7 +349,7 @@ list(
 
   tar_target(context_ind_fishery_reliant_communities,
              command={
-               fishingcomm <- read_excel(file.path(store, "data", "DFO_CSBP_FishingCommunities_Final_2022.xlsx")) |>
+               fishingcomm <- read_excel(file.path(path_to_store(), "data", "DFO_CSBP_FishingCommunities_Final_2022.xlsx")) |>
                  mutate(CSDUID = as.character(CSDcode),
                         ind_fishery_reliant_communities = FishingRel)
 
