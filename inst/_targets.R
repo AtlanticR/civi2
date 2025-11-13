@@ -15,8 +15,8 @@ pkgs <- c("AtlanticR/civi2",
           "leaflet")
 shelf(pkgs)
 tar_option_set(packages = basename(pkgs),
-               error = "continue",
-               controller = crew_controller_local(workers = 3))
+               # controller = crew_controller_local(workers = 3),
+               error = "continue")
 
 # Set the store path for targets
 path_to_store <- function(){
@@ -146,7 +146,7 @@ list(
              command = {
                future_siteBufferToMultiLineIntersection(
                  sites = data_CIVI_Sites |>
-                   filter(HarbourCode %in% ind_degree_of_protection$HarbourCode[!is.na(ind_degree_of_protection$Value)]),
+                   filter(HarbourCode %in% context_ind_MarineInland$HarbourCode[context_ind_MarineInland$MarineInland=="Marine"]),
                  name_sites = "HarbourCode",
                  sfLines = data_CANCOAST_CSI_V2_5_6,
                  name_sfLines_variable = "CSI_diff",
@@ -292,6 +292,25 @@ list(
 
   # Contextual Indicators
 
+  tar_target(context_ind_MarineInland,
+             command={
+
+               distmat <- data_CIVI_Sites |>
+                 as.data.frame() |>
+                 dplyr::select(HarbourCode) |>
+                 mutate(
+                   coastnearby = st_is_within_distance(
+                     data_CIVI_Sites,
+                     data_CANCOAST_CSI_V2_5_6,
+                     dist = 20000,
+                     sparse = TRUE
+                   ) |>
+                     lengths(),
+                   MarineInland = if_else(coastnearby > 1, "Marine", "Inland")) |>
+                 dplyr::select(-coastnearby)
+
+             }),
+
   tar_target(context_ind_csd,
              command={
                # NOTE THIS IS A STATISTIC CANADA SHAPE FILE FOR CSDNAME (google 2025 sub division shape files census)
@@ -435,14 +454,10 @@ list(
                  left_join(data_CIVI_Sites %>% dplyr::select(HarbourCode, HarbourName, Province),
                            by = "HarbourCode") %>%
                  mutate("HarbourType"=NA) %>%
-                 mutate(MarineInLand = if_else(
-                   is.na(ind_harbour_condition_Value),
-                   "InLand",
-                   "Marine"
-                 )) %>%
                  left_join(data_CIVI_Sites %>% dplyr::select(HarbourCode, Lat, Long, Zone),
                            by = "HarbourCode") %>%
                  rename(SCH_region = Zone) %>%
+                 full_join(context_ind_MarineInland, by="HarbourCode") %>%
                  full_join(context_ind_csd, by="HarbourCode") %>%
                  full_join(context_ind_population, by="HarbourCode") %>%
                  full_join(context_ind_fishery_reliant_communities, by="HarbourCode") %>%
