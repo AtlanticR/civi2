@@ -78,6 +78,11 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
   names(driving_output) <- sch_df$HarbourName
 
 
+  # Download and buffer land
+  land <- ne_download(scale = "large", type = "land", category = "physical", returnclass = "sf") #Downloading the land at large scale
+  land_proj <-  "+proj=eqdc +lon_0=-96.328125 +lat_1=45.5659042 +lat_2=76.9551598 +lat_0=61.260532 +datum=WGS84 +units=m +no_defs"
+  land_buffered_wgs84 <- st_transform(land, crs = land_proj) # Changing the projection #32620
+
   # Function to get 2 nearest neighbours (based on sailing)
   for (i in seq_along(sch_df$HarbourName)) {
     message(paste0("i = ", i))
@@ -93,7 +98,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
       matrix(c(others$Long, others$Lat), ncol=2)
     ) / 1000
 
-    within_20 <- others[dists_haversine <= 10, , drop = FALSE] # NOTE: THIS COULD BE REMOVED
+    within_20 <- others[dists_haversine <= 20, , drop = FALSE] # NOTE: THIS COULD BE REMOVED
 
     if (nrow(within_20) == 0) {
       sailing_output[[i]] <- data.frame(
@@ -147,13 +152,6 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
         waypoints_sf <- st_as_sf(waypoints, coords = c("lon", "lat"), crs = 4326)
         proj <- "+proj=eqdc +lon_0=-96.328125 +lat_1=45.5659042 +lat_2=76.9551598 +lat_0=61.260532 +datum=WGS84 +units=m +no_defs"
         waypoints_proj <- st_transform(waypoints_sf, crs=proj)
-        # 2. Download and buffer land
-        land <- ne_download(scale = "large", type = "land", category = "physical", returnclass = "sf") #Downloading the land at medium scale
-        land_proj <- st_transform(land, crs = "+proj=eqdc +lon_0=-96.328125 +lat_1=45.5659042 +lat_2=76.9551598 +lat_0=61.260532 +datum=WGS84 +units=m +no_defs") # Changing the projection #32620
-        #plot(land_proj$geometry)
-        land_buffered_wgs84 <- land_proj
-        #land_buffered <- st_buffer(land_proj, dist = -100)  # inward buffer (take each land and move it inwards by 100 units)
-        #land_buffered_wgs84 <- st_transform(land_proj, crs = "") # Switch to another projection (this could be one problem)
 
         # 3. Create raster grid
         bb <- st_bbox(waypoints_proj) # puts a box around your points of interest
