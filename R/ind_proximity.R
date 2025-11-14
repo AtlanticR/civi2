@@ -245,6 +245,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
           # No driving route available
           dist_km <- NA
           duration_hr <- NA
+          cat("No driving distance found")
 
         } else {
 
