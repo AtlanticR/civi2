@@ -170,7 +170,6 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
           message("⚠️ Pathfinding failed: ", e$message)
           return(NULL)
         })
-        browser()
 
         # 9. Plot and calculate distance if path is valid
         if (!is.null(path)) {
@@ -227,9 +226,11 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
 
         ## CONSIDERING DRIVING DISTANCES
-        dest_lat <- within_20$Lat[j]
-        dest_lon <- within_20$Long[j]
-        dest_name <- within_20$HarbourName[j]
+        origin_coords <-   c(sch_df$Long[i], sch_df$Lat[i])
+
+        dest_lat <- others$Lat[j]
+        dest_lon <- others$Long[j]
+        dest_name <- others$HarbourName[j]
         coords <- list(origin_coords, c(dest_lon, dest_lat))
 
         res <- tryCatch({
@@ -254,6 +255,9 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
 
           dist_km <- dist_m/1000
+
+          cat("Driving distance:", round(dist_km / 1000, 2), "km\n")
+
 
 
           # TIME
