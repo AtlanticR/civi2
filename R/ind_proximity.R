@@ -243,9 +243,8 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
         if (is.null(res)) {
           # No driving route available
-          dist_km <- distHaversine(origin_coords, c(dest_lon, dest_lat)) / 1000  # in km
-          speed <- 70
-          duration_hr <- dist_km/speed
+          dist_km <- NA
+          duration_hr <- NA
 
         } else {
 
@@ -256,7 +255,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
           dist_km <- dist_m/1000
 
-          cat("Driving distance:", round(dist_km / 1000, 2), "km\n")
+          cat("Driving distance:", round(dist_km, 2), "km\n")
 
 
 
