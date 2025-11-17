@@ -89,7 +89,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
   # Function to get 2 nearest neighbours (based on sailing)
   for (i in seq_along(sch_df$HarbourName)) {
-    message(paste0("i = ", i))
+    #message(paste0("i = ", i))
     #others <- sch_df[-i, ]
 
     # Filter by straight-line distance (Haversine)
@@ -306,10 +306,13 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
   }
 
   ind_proximety <- data.frame(HarbourName=names(sailing_output), Sailing_Nearest_Neighbour=NA, Sailing_Time=NA, Sailing_Distance=NA, Driving_Nearest_Neighbour=NA, Driving_Distance=NA, Driving_Time=NA, Sailing_Plot=NA, Driving_Plot=NA)
+
+#browser()
   for (i in seq_along(sailing_output)) {
+    message("i=", i)
     message("sailing output i = ", i)
     if (!(all(is.na(sailing_output[[i]]$Neighbour)))) {
-    keep <- which(sailing_output[[i]]$Distance_Sailing_Km == min(sailing_output[[i]]$Distance_Sailing_Km))
+    keep <- which(sailing_output[[i]]$Distance_Sailing_Km == min(sailing_output[[i]]$Distance_Sailing_Km, na.rm=TRUE))
     if (length(keep) == 1) {
     ind_proximety$Sailing_Nearest_Neighbour[i] <- sailing_output[[i]]$Neighbour[keep]
     } else {
@@ -323,7 +326,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
 
     if (!(all(is.na(driving_output[[i]]$Neighbour)))) {
-      keep <- which(driving_output[[i]]$Distance_Driving_Km == min(driving_output[[i]]$Distance_Driving_Km))
+      keep <- which(driving_output[[i]]$Distance_Driving_Km == min(driving_output[[i]]$Distance_Driving_Km, na.rm=TRUE))
       ind_proximety$Driving_Nearest_Neighbour[i] <- driving_output[[i]]$Neighbour[keep]
       ind_proximety$Driving_Distance[i] <- driving_output[[i]]$Distance_Driving_Km[keep]
       ind_proximety$Driving_Time[i] <- driving_output[[i]]$Time_Driving_Km[keep]
@@ -334,8 +337,10 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
   ind_proximety$Result <- NA
 
-  ind_proximety_short <- data.frame(HarbourName=names(sailing_output), Value=NA, Score=NA)
+  #browser()
 
+
+  ind_proximety_short <- data.frame(HarbourName=names(sailing_output), Value=NA, Score=NA)
   for (i in seq_along(ind_proximety$HarbourName)) {
     message("proximity output i = ", i)
 
