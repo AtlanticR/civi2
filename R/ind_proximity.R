@@ -65,6 +65,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
     stop("Must provide a ors_api_key to obtain driving distances using the openroutesservice package")
   }
   ors_api_key(ors_api_key)
+  Sys.setenv(ORS_API_KEY = ors_api_key)
   proj <- "+proj=eqdc +lon_0=-96.328125 +lat_1=45.5659042 +lat_2=76.9551598 +lat_0=61.260532 +datum=WGS84 +units=m +no_defs"
 
 
@@ -240,6 +241,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
         driving_plot <- tryCatch({
           ors_directions(coords, profile = "driving-car", output = "sf")
         }, error = function(e) NULL)
+
 
         if (is.null(res)) {
           # No driving route available
