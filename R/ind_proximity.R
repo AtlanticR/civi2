@@ -360,6 +360,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
   # Score
   ind_proximety_short$Score <- cut(as.vector(transformSkewness(ind_proximety_short$Value)), breaks=5, labels=1:5)
+  ind_proximety_short$Score[is.na(ind_proximety_short$Score)] <- 5
 
 
   # New Changing Names
