@@ -90,7 +90,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
   # Function to get 2 nearest neighbours (based on sailing)
   for (i in seq_along(sch_df$HarbourName)) {
-    #message(paste0("i = ", i))
+    message(paste0("i = ", i))
     #others <- sch_df[-i, ]
 
     # Filter by straight-line distance (Haversine)
