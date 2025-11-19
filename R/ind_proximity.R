@@ -3,7 +3,7 @@
 #' This function first calculates proximity between Small Craft Harbours (SCH) sites
 #' based on sailing distances (least-cost paths avoiding land) while assuming ~
 #' a speed of 10 knots. It identifies
-#' neighbouring harbours within 50 km straight-line distance, then estimates
+#' neighbouring harbours within 20 km straight-line distance, then estimates
 #' sailing routes while avoiding land using raster least-cost path analysis.
 #' The function then calculates the driving distances
 #' using the openrouteservices package. If a waypoint falls on land during the
@@ -30,7 +30,7 @@
 #' @details
 #' Distances are computed in two stages:
 #' \enumerate{
-#'   \item A straight-line (Haversine) filter to keep neighbours within 50 km.
+#'   \item A straight-line (Haversine) filter to keep neighbours within 20 km.
 #'   \item A least-cost path calculation over a raster with land masked as
 #'         impassable. If routing fails (e.g., waypoints fall on land), the
 #'         function falls back to Haversine distance.
@@ -101,9 +101,9 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
       matrix(c(sch_df$Long, sch_df$Lat), ncol=2)
     ) / 1000
 
-    within_50 <- sch_df[dists_haversine <= 50, , drop = FALSE] # NOTE: THIS COULD BE REMOVED
+    within_20 <- sch_df[dists_haversine <= 20, , drop = FALSE] # NOTE: THIS COULD BE REMOVED
 
-    if (nrow(within_50) == 1) {
+    if (nrow(within_20) == 1) {
       sailing_output[[i]] <- data.frame(
         Neighbour = NA,
         Distance_Sailing_Km = NA,
@@ -120,14 +120,14 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
     } else {
       sailing_output[[i]] <- data.frame(
-        Neighbour = within_50$HarbourCode,
+        Neighbour = within_20$HarbourCode,
         Distance_Sailing_Km = NA,
         plot=NA,
         SailingTime_Hours=NA
       )
 
       driving_output[[i]] <- data.frame(
-        Neighbour = within_50$HarbourCode,
+        Neighbour = within_20$HarbourCode,
         Distance_Driving_Km = NA,
         plot=NA,
         Time_Driving_Km=NA
@@ -137,11 +137,11 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
       vessel_speed_kmh <- 18  ### Roughly 10 knots
 
-      waypoints_proj <- st_transform(within_50, crs=proj)
+      waypoints_proj <- st_transform(within_20, crs=proj)
 
       # 3. Create raster grid
-      bb <- st_bbox(waypoints_proj) # puts a box around your points of interest (within_50 and sch_df[i])
-      margin <- 25000 # This is for when we need to go outside of our bounding box
+      bb <- st_bbox(waypoints_proj) # puts a box around your points of interest (within_20 and sch_df[i])
+      margin <- 20000 # This is for when we need to go outside of our bounding box
       r <- raster(extent(bb$xmin - margin, bb$xmax + margin,
                          bb$ymin - margin, bb$ymax + margin),
                   res = 100) # (m) - this resolution would make the line within 100 m of the point
@@ -159,7 +159,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
       p1 <- st_coordinates(sch_df[i,])
 
-      others <- within_50[!(within_50$HarbourCode == sch_df$HarbourCode[i]),]
+      others <- within_20[!(within_20$HarbourCode == sch_df$HarbourCode[i]),]
 
       for (j in seq_along(others$HarbourCode)) {
         p2 <- st_coordinates(others[j, ])
