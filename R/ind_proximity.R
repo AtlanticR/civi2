@@ -238,7 +238,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
         if(length(ors_api_key) > 1) {
           # Alternate between API keys for each i
-          current_key <- ors_api_key[((i - 1) %% length(ors_api_keys)) + 1]
+          current_key <- ors_api_key[((i - 1) %% length(ors_api_key)) + 1]
           ors_api_key(current_key)
           Sys.setenv(ORS_API_KEY = current_key)
         }
