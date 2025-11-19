@@ -245,18 +245,16 @@ list(
 
   tar_target(ind_sch_proximity,
              command={
-                ind_proximity(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=read.table(file.path(path_to_store(),"data","ors_api_key.txt"))$V1, full_results=FALSE)
+               ors_api_keys <- read.csv(file.path(path_to_store(),"data","ors_api_key.csv")) |>
+                 pull(key) |>
+                 unlist()
+
+               sites <- data_CIVI_Sites |>
+                 dplyr::select(-MarineInland) |>
+                 left_join(context_ind_MarineInland, by = "HarbourCode")
+
+                ind_proximity(data_CIVI_Sites=sites, ors_api_key=ors_api_keys, full_results=TRUE)
              }),
-
-  tar_target(ind_proximity_full_debug,
-             command={
-
-               pw <- read.table(file.path(path_to_store(),"data","ors_api_key.txt"))$V1
-
-               x <- ind_proximity(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=pw, full_results=TRUE)
-               x
-             }),
-
 
   # Components
   tar_target(comp_sensitivity,
@@ -291,7 +289,8 @@ list(
              command={
                list(ind_replacement_cost = ind_replacement_cost,
                     ind_harbour_utilization = ind_harbour_utilization,
-                    ind_sch_proximity = ind_sch_proximity) |>
+                    ind_sch_proximity = ind_sch_proximity |>
+                      dplyr::select(HarbourCode,Value,Score)) |>
                  join_comps() |>
                  rowwise() |>
                  mutate(adaptive_capacity = geometricMean(

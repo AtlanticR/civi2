@@ -17,7 +17,7 @@ ind_proximity(
 using the openrouteservice package}
 
 \item{full_results}{a Boolean indicating if you want a more fulsome result
-including the following: "HarbourName","Sailing_Nearest_Neighbour", "Sailing_Time", "Sailing_Distance",
+including the following: "HarbourCode","Sailing_Nearest_Neighbour", "Sailing_Time", "Sailing_Distance",
 "Driving_Nearest_Neighbour", "Driving_Distance","Driving_Time","Sailing_Plot",
 "Driving_Plot","Driving_time", "Result"}
 }
@@ -33,7 +33,7 @@ A list of data frames (one per harbour) containing:
 This function first calculates proximity between Small Craft Harbours (SCH) sites
 based on sailing distances (least-cost paths avoiding land) while assuming ~
 a speed of 10 knots. It identifies
-neighbouring harbours within 20 km straight-line distance, then estimates
+neighbouring harbours within 50 km straight-line distance, then estimates
 sailing routes while avoiding land using raster least-cost path analysis.
 The function then calculates the driving distances
 using the openrouteservices package. If a waypoint falls on land during the
@@ -45,7 +45,7 @@ The final output takes the larger of the sailing and driving distances.
 \details{
 Distances are computed in two stages:
 \enumerate{
-\item A straight-line (Haversine) filter to keep neighbours within 20 km.
+\item A straight-line (Haversine) filter to keep neighbours within 50 km.
 \item A least-cost path calculation over a raster with land masked as
 impassable. If routing fails (e.g., waypoints fall on land), the
 function falls back to Haversine distance.

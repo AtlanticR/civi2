@@ -3,7 +3,7 @@
 #' This function first calculates proximity between Small Craft Harbours (SCH) sites
 #' based on sailing distances (least-cost paths avoiding land) while assuming ~
 #' a speed of 10 knots. It identifies
-#' neighbouring harbours within 20 km straight-line distance, then estimates
+#' neighbouring harbours within 50 km straight-line distance, then estimates
 #' sailing routes while avoiding land using raster least-cost path analysis.
 #' The function then calculates the driving distances
 #' using the openrouteservices package. If a waypoint falls on land during the
@@ -14,7 +14,7 @@
 #'
 #' @param data_CIVI_Sites A data frame likely from [data_CIVI_Sites()]
 #' @param full_results a Boolean indicating if you want a more fulsome result
-#' including the following: "HarbourName","Sailing_Nearest_Neighbour", "Sailing_Time", "Sailing_Distance",
+#' including the following: "HarbourCode","Sailing_Nearest_Neighbour", "Sailing_Time", "Sailing_Distance",
 #' "Driving_Nearest_Neighbour", "Driving_Distance","Driving_Time","Sailing_Plot",
 #' "Driving_Plot","Driving_time", "Result"
 #' @param ors_api_key your ors_api_key password to obtain driving distance
@@ -30,7 +30,7 @@
 #' @details
 #' Distances are computed in two stages:
 #' \enumerate{
-#'   \item A straight-line (Haversine) filter to keep neighbours within 20 km.
+#'   \item A straight-line (Haversine) filter to keep neighbours within 50 km.
 #'   \item A least-cost path calculation over a raster with land masked as
 #'         impassable. If routing fails (e.g., waypoints fall on land), the
 #'         function falls back to Haversine distance.
@@ -64,8 +64,10 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
   if (is.null(ors_api_key)) {
     stop("Must provide a ors_api_key to obtain driving distances using the openroutesservice package")
   }
-  ors_api_key(ors_api_key)
-  Sys.setenv(ORS_API_KEY = ors_api_key)
+  if (length(ors_api_key)==1) {
+    ors_api_key(ors_api_key)
+    Sys.setenv(ORS_API_KEY = ors_api_key)
+  }
   proj <- "+proj=eqdc +lon_0=-96.328125 +lat_1=45.5659042 +lat_2=76.9551598 +lat_0=61.260532 +datum=WGS84 +units=m +no_defs"
 
 
@@ -76,10 +78,10 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
   # Initialize failure log
 
-  sailing_output <- vector("list", length(sch_df$HarbourName))
-  driving_output <- vector("list", length(sch_df$HarbourName))
-  names(sailing_output) <- sch_df$HarbourName
-  names(driving_output) <- sch_df$HarbourName
+  sailing_output <- vector("list", length(sch_df$HarbourCode))
+  driving_output <- vector("list", length(sch_df$HarbourCode))
+  names(sailing_output) <- sch_df$HarbourCode
+  names(driving_output) <- sch_df$HarbourCode
 
 
   # Download and buffer land
@@ -89,7 +91,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
 
   # Function to get 2 nearest neighbours (based on sailing)
-  for (i in seq_along(sch_df$HarbourName)) {
+  for (i in seq_along(sch_df$HarbourCode)) {
     message(paste0("i = ", i))
     #others <- sch_df[-i, ]
 
@@ -99,9 +101,9 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
       matrix(c(sch_df$Long, sch_df$Lat), ncol=2)
     ) / 1000
 
-    within_20 <- sch_df[dists_haversine <= 20, , drop = FALSE] # NOTE: THIS COULD BE REMOVED
+    within_50 <- sch_df[dists_haversine <= 50, , drop = FALSE] # NOTE: THIS COULD BE REMOVED
 
-    if (nrow(within_20) == 1) {
+    if (nrow(within_50) == 1) {
       sailing_output[[i]] <- data.frame(
         Neighbour = NA,
         Distance_Sailing_Km = NA,
@@ -118,14 +120,14 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
     } else {
       sailing_output[[i]] <- data.frame(
-        Neighbour = within_20$HarbourName,
+        Neighbour = within_50$HarbourCode,
         Distance_Sailing_Km = NA,
         plot=NA,
         SailingTime_Hours=NA
       )
 
       driving_output[[i]] <- data.frame(
-        Neighbour = within_20$HarbourName,
+        Neighbour = within_50$HarbourCode,
         Distance_Driving_Km = NA,
         plot=NA,
         Time_Driving_Km=NA
@@ -135,11 +137,11 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
       vessel_speed_kmh <- 18  ### Roughly 10 knots
 
-      waypoints_proj <- st_transform(within_20, crs=proj)
+      waypoints_proj <- st_transform(within_50, crs=proj)
 
       # 3. Create raster grid
-      bb <- st_bbox(waypoints_proj) # puts a box around your points of interest (within_20 and sch_df[i])
-      margin <- 20000 # This is for when we need to go outside of our bounding box
+      bb <- st_bbox(waypoints_proj) # puts a box around your points of interest (within_50 and sch_df[i])
+      margin <- 25000 # This is for when we need to go outside of our bounding box
       r <- raster(extent(bb$xmin - margin, bb$xmax + margin,
                          bb$ymin - margin, bb$ymax + margin),
                   res = 100) # (m) - this resolution would make the line within 100 m of the point
@@ -157,7 +159,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
       p1 <- st_coordinates(sch_df[i,])
 
-      others <- within_20[!(within_20$HarbourCode == sch_df$HarbourCode[i]),]
+      others <- within_50[!(within_50$HarbourCode == sch_df$HarbourCode[i]),]
 
       for (j in seq_along(others$HarbourCode)) {
         p2 <- st_coordinates(others[j, ])
@@ -231,8 +233,15 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
         dest_lat <- others$Lat[j]
         dest_lon <- others$Long[j]
-        dest_name <- others$HarbourName[j]
+        dest_name <- others$HarbourCode[j]
         coords <- list(origin_coords, c(dest_lon, dest_lat))
+
+        if(length(ors_api_key) > 1) {
+          # Alternate between API keys for each i
+          current_key <- ors_api_key[((i - 1) %% length(ors_api_keys)) + 1]
+          ors_api_key(current_key)
+          Sys.setenv(ORS_API_KEY = current_key)
+        }
 
         res <- tryCatch({
           ors_directions(coords, profile = "driving-car")
@@ -247,7 +256,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
           # No driving route available
           dist_km <- NA
           duration_hr <- NA
-          cat("No driving distance found")
+          cat("No driving distance found\n")
 
         } else {
 
@@ -307,7 +316,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
     }
   }
 
-  ind_proximety <- data.frame(HarbourName=names(sailing_output), Sailing_Nearest_Neighbour=NA, Sailing_Time=NA, Sailing_Distance=NA, Driving_Nearest_Neighbour=NA, Driving_Distance=NA, Driving_Time=NA, Sailing_Plot=NA, Driving_Plot=NA)
+  ind_proximety <- data.frame(HarbourCode=names(sailing_output), Sailing_Nearest_Neighbour=NA, Sailing_Time=NA, Sailing_Distance=NA, Driving_Nearest_Neighbour=NA, Driving_Distance=NA, Driving_Time=NA, Sailing_Plot=NA, Driving_Plot=NA)
 
 #browser()
   for (i in seq_along(sailing_output)) {
@@ -342,8 +351,8 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
   #browser()
 
 
-  ind_proximety_short <- data.frame(HarbourName=names(sailing_output), Value=NA, Score=NA)
-  for (i in seq_along(ind_proximety$HarbourName)) {
+  ind_proximety_short <- data.frame(HarbourCode=names(sailing_output), Value=NA, Score=NA)
+  for (i in seq_along(ind_proximety$HarbourCode)) {
     message("proximity output i = ", i)
 
     if (!(all(is.na(ind_proximety[i, c("Sailing_Time", "Driving_Time")])))) { # Checking if they're both NA
@@ -386,9 +395,9 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
   # New Changing Names
   ind_proximety_short$HarbourCode <- NA
   if (!(full_results)) {
-  for (i in seq_along(ind_proximety_short$HarbourName)) {
+  for (i in seq_along(ind_proximety_short$HarbourCode)) {
     message(i)
-    keep <- which(data_CIVI_Sites$HarbourName == ind_proximety$HarbourName[i])
+    keep <- which(data_CIVI_Sites$HarbourCode == ind_proximety$HarbourCode[i])
     if (!(length(keep) == 0)) {
     ind_proximety_short$HarbourCode[i] <- data_CIVI_Sites$HarbourCode[keep]
     }
@@ -400,8 +409,10 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
   }
   # End New
 
+
   if (full_results) {
-    return(ind_proximety)
+    return(ind_proximety |>
+             left_join(ind_proximety_short, by = "HarbourCode"))
   } else {
     return(ind_proximety_short)
   }
