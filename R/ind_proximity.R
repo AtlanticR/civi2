@@ -92,7 +92,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
   # Function to get 2 nearest neighbours (based on sailing)
   for (i in seq_along(sch_df$HarbourCode)) {
-    message(paste0("i = ", i))
+    message(paste0("i = ", i, " HarbourCode = ", sch_df$HarbourCode[i]))
     #others <- sch_df[-i, ]
 
     # Filter by straight-line distance (Haversine)
@@ -101,7 +101,8 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
       matrix(c(sch_df$Long, sch_df$Lat), ncol=2)
     ) / 1000
 
-    within_20 <- sch_df[dists_haversine <= 20, , drop = FALSE] # NOTE: THIS COULD BE REMOVED
+    within_20 <- sch_df[dists_haversine <= 20, , drop = FALSE]
+    within_100m <- sch_df[dists_haversine <= 0.1, , drop = FALSE]
 
     if (nrow(within_20) == 1) {
       sailing_output[[i]] <- data.frame(
@@ -162,152 +163,167 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
       others <- within_20[!(within_20$HarbourCode == sch_df$HarbourCode[i]),]
 
       for (j in seq_along(others$HarbourCode)) {
-        p2 <- st_coordinates(others[j, ])
+        if(others$HarbourCode[j] %in% within_100m$HarbourCode) {
+          # cases where facilities are too close, resort to straight line distance
 
-        if (others$MarineInland[j] == "Marine") {
+          cat("⚠️ Waypoints too close (<=100m). Using straight-line distance.\n"))
+          sailing_output[[i]]$Distance_Sailing_Km[[j]] <- straightlinedist
+          sailing_output[[i]]$SailingTime_Hours[[j]] <- straightlinedist / vessel_speed_kmh
 
-        # Calculating shortest path across a raster.
-        path <- tryCatch({
-          gdistance::shortestPath(tr, p1, p2, output = "SpatialLines")
-        }, error = function(e) {
-          message("⚠️ Pathfinding failed: ", e$message)
-          return(NULL)
-        })
+          driving_output[[i]]$Distance_Driving_Km[[j]] <- straightlinedist
+          driving_output[[i]]$Time_Driving_Km[[j]] <- straightlinedist/50
 
-        # 9. Plot and calculate distance if path is valid
-        if (!is.null(path)) {
-          route_proj <- st_as_sf(path)
-          st_crs(route_proj) <- proj
-          route_sf <- st_transform(route_proj, crs=4326)
-          land_buffered_wgs84 <- st_transform(land_buffered_wgs84, crs=4326)
-
-
-          waypoints_sf <- rbind(sch_df[i,], others[j,]) |> st_transform(4326)
-          # Create leaflet map
-          title_text <- "sailing route"
-          ggp  <- leaflet() %>%
-            addTiles() %>%
-            # Add sailing route
-            addPolylines(data = route_sf,
-                         color = "blue",
-                         weight = 3,
-                         opacity = 1) %>%
-            # Add waypoints
-            addCircleMarkers(data = waypoints_sf,
-                             color = "red",
-                             radius = 6,
-                             fillOpacity = 1,
-                             label = ~HarbourName) %>%
-            # Set view to focus on the area
-            setView(lng = mean(waypoints_sf$Long), lat = mean(waypoints_sf$Lat), zoom = 9) %>%
-            addControl(html = paste0("<h3>", title_text, "</h3>"), position = "topright") %>%
-            addPolygons(data=land_buffered_wgs84, col='brown')
-
-
-          coords <- st_coordinates(route_sf)
-          distance <- sum(geosphere::distGeo(coords[-nrow(coords), 1:2], coords[-1, 1:2]))
-
-          sailing_output[[i]]$plot[[j]] <- ggp
-          coords <- st_coordinates(route_sf)
-          distance <- sum(geosphere::distGeo(coords[-nrow(coords), 1:2], coords[-1, 1:2]))
-          sailing_output[[i]]$Distance_Sailing_Km[j] <- round(distance/1000, 2)
-          sailing_output[[i]]$SailingTime_Hours[j] <- round(sailing_output[[i]]$Distance_Sailing_Km[j] / vessel_speed_kmh, 2)  ### 🔴 new line
-          cat("✅ Total sailing distance (avoiding land):", round(distance / 1000, 2), "km\n")
         } else {
-          # Not Marine
-          sailing_output[[i]] <- data.frame(
-            Neighbour = NA,
-            Distance_Sailing_Km = NA,
-            plot=NA,
-            SailingTime_Hours=NA
-          )
 
-        }
+
+          p2 <- st_coordinates(others[j, ])
+
+          if (others$MarineInland[j] == "Marine") {
+
+            # Calculating shortest path across a raster.
+            path <- tryCatch({
+              gdistance::shortestPath(tr, p1, p2, output = "SpatialLines")
+            }, error = function(e) {
+              message("⚠️ Pathfinding failed: ", e$message)
+              return(NULL)
+            })
+
+            # 9. Plot and calculate distance if path is valid
+            if (!is.null(path)) {
+              route_proj <- st_as_sf(path)
+              st_crs(route_proj) <- proj
+              route_sf <- st_transform(route_proj, crs=4326)
+              land_buffered_wgs84 <- st_transform(land_buffered_wgs84, crs=4326)
+
+
+              waypoints_sf <- rbind(sch_df[i,], others[j,]) |> st_transform(4326)
+              # Create leaflet map
+              title_text <- "sailing route"
+              ggp  <- leaflet() %>%
+                addTiles() %>%
+                # Add sailing route
+                addPolylines(data = route_sf,
+                             color = "blue",
+                             weight = 3,
+                             opacity = 1) %>%
+                # Add waypoints
+                addCircleMarkers(data = waypoints_sf,
+                                 color = "red",
+                                 radius = 6,
+                                 fillOpacity = 1,
+                                 label = ~HarbourName) %>%
+                # Set view to focus on the area
+                setView(lng = mean(waypoints_sf$Long), lat = mean(waypoints_sf$Lat), zoom = 9) %>%
+                addControl(html = paste0("<h3>", title_text, "</h3>"), position = "topright") %>%
+                addPolygons(data=land_buffered_wgs84, col='brown')
+
+
+              coords <- st_coordinates(route_sf)
+              distance <- sum(geosphere::distGeo(coords[-nrow(coords), 1:2], coords[-1, 1:2]))
+
+
+              sailing_output[[i]]$plot[[j]] <- ggp
+              coords <- st_coordinates(route_sf)
+              distance <- sum(geosphere::distGeo(coords[-nrow(coords), 1:2], coords[-1, 1:2]))
+              sailing_output[[i]]$Distance_Sailing_Km[j] <- round(distance/1000, 2)
+              sailing_output[[i]]$SailingTime_Hours[j] <- round(sailing_output[[i]]$Distance_Sailing_Km[j] / vessel_speed_kmh, 2)  ### 🔴 new line
+              cat("✅ Total sailing distance (avoiding land):", round(distance / 1000, 2), "km\n")
+            } else {
+              # Not Marine
+              sailing_output[[i]] <- data.frame(
+                Neighbour = NA,
+                Distance_Sailing_Km = NA,
+                plot=NA,
+                SailingTime_Hours=NA
+              )
+
+            }
           } else {
-          cat("❌ No valid sailing route found. Try adjusting resolution or waypoint positions.\n")
-        }
+            cat("❌ No valid sailing route found. Try adjusting resolution or waypoint positions.\n")
+          }
 
 
-        ## CONSIDERING DRIVING DISTANCES
-        origin_coords <-   c(sch_df$Long[i], sch_df$Lat[i])
+          ## CONSIDERING DRIVING DISTANCES
+          origin_coords <-   c(sch_df$Long[i], sch_df$Lat[i])
 
-        dest_lat <- others$Lat[j]
-        dest_lon <- others$Long[j]
-        dest_name <- others$HarbourCode[j]
-        coords <- list(origin_coords, c(dest_lon, dest_lat))
+          dest_lat <- others$Lat[j]
+          dest_lon <- others$Long[j]
+          dest_name <- others$HarbourCode[j]
+          coords <- list(origin_coords, c(dest_lon, dest_lat))
 
-        if(length(ors_api_key) > 1) {
-          # Alternate between API keys for each i
-          current_key <- ors_api_key[((i - 1) %% length(ors_api_key)) + 1]
-          ors_api_key(current_key)
-          Sys.setenv(ORS_API_KEY = current_key)
-        }
+          if(length(ors_api_key) > 1) {
+            # Alternate between API keys for each i
+            current_key <- ors_api_key[((i - 1) %% length(ors_api_key)) + 1]
+            ors_api_key(current_key)
+            Sys.setenv(ORS_API_KEY = current_key)
+          }
 
-        res <- tryCatch({
-          ors_directions(coords, profile = "driving-car")
-        }, error = function(e) NULL)
+          res <- tryCatch({
+            ors_directions(coords, profile = "driving-car")
+          }, error = function(e) NULL)
 
-        driving_plot <- tryCatch({
-          ors_directions(coords, profile = "driving-car", output = "sf")
-        }, error = function(e) NULL)
-
-
-        if (is.null(res)) {
-          # No driving route available
-          dist_km <- NA
-          duration_hr <- NA
-          cat("No driving distance found\n")
-
-        } else {
-
-          dist_m <- tryCatch({
-            res$features[[1]]$properties$summary$distance
-          }, error = function(e) NA)
+          driving_plot <- tryCatch({
+            ors_directions(coords, profile = "driving-car", output = "sf")
+          }, error = function(e) NULL)
 
 
-          dist_km <- dist_m/1000
+          if (is.null(res)|is.null(res$features[[1]]$properties$summary$distance)) {
+            # No driving route available
+            dist_km <- NA
+            duration_hr <- NA
+            cat("No driving distance found\n")
 
-          cat("Driving distance:", round(dist_km, 2), "km\n")
+          } else {
+
+            dist_m <- tryCatch({
+              res$features[[1]]$properties$summary$distance
+            }, error = function(e) NA)
+
+
+            dist_km <- dist_m/1000
+
+            cat("Driving distance:", round(dist_km, 2), "km\n")
 
 
 
-          # TIME
-          duration_sec <- res$features[[1]]$properties$summary$duration
+            # TIME
+            duration_sec <- res$features[[1]]$properties$summary$duration
 
-          # Convert to hours
-          duration_hr <- duration_sec / 3600
+            # Convert to hours
+            duration_hr <- duration_sec / 3600
 
-        }
+          }
 
-        driving_output[[i]]$Distance_Driving_Km[j] <- dist_km
-        driving_output[[i]]$Time_Driving_Km[j] <- duration_hr
+          driving_output[[i]]$Distance_Driving_Km[j] <- dist_km
+          driving_output[[i]]$Time_Driving_Km[j] <- duration_hr
 
-        if (!(is.null(driving_plot)) && !(is.null(res))) {
-          map <- leaflet() %>%
-            addTiles() %>%
-            addPolylines(
-              data = driving_plot,
-              color = "blue",
-              weight = 4,
-              opacity = 0.8
-            ) %>%
-            addMarkers(
-              lng = st_coordinates(driving_plot)[1, "X"],
-              lat = st_coordinates(driving_plot)[1, "Y"],
-              popup = sch_df$HarbourName[i],
-              label = sch_df$HarbourName[i]
-            ) %>%
-            addMarkers(
-              lng = st_coordinates(driving_plot)[nrow(st_coordinates(driving_plot)), "X"],
-              lat = st_coordinates(driving_plot)[nrow(st_coordinates(driving_plot)), "Y"],
-              popup = driving_output[[i]]$Neighbour[j],
-              label = driving_output[[i]]$Neighbour[j]
-            )
+          if (!(is.null(driving_plot)) && !(is.null(res))) {
+            map <- leaflet() %>%
+              addTiles() %>%
+              addPolylines(
+                data = driving_plot,
+                color = "blue",
+                weight = 4,
+                opacity = 0.8
+              ) %>%
+              addMarkers(
+                lng = st_coordinates(driving_plot)[1, "X"],
+                lat = st_coordinates(driving_plot)[1, "Y"],
+                popup = sch_df$HarbourName[i],
+                label = sch_df$HarbourName[i]
+              ) %>%
+              addMarkers(
+                lng = st_coordinates(driving_plot)[nrow(st_coordinates(driving_plot)), "X"],
+                lat = st_coordinates(driving_plot)[nrow(st_coordinates(driving_plot)), "Y"],
+                popup = driving_output[[i]]$Neighbour[j],
+                label = driving_output[[i]]$Neighbour[j]
+              )
 
-          driving_output[[i]]$plot[[j]] <- map
-        } else {
-          driving_output[[i]]$plot[[j]] <- 1
+            driving_output[[i]]$plot[[j]] <- map
+          } else {
+            driving_output[[i]]$plot[[j]] <- 1
 
+          }
         }
       }
 
