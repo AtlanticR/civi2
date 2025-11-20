@@ -166,7 +166,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
         if(others$HarbourCode[j] %in% within_100m$HarbourCode) {
           # cases where facilities are too close, resort to straight line distance
 
-          cat("⚠️ Waypoints too close (<=100m). Using straight-line distance.\n"))
+          cat("⚠️ Waypoints too close (<=100m). Using straight-line distance.\n")
           sailing_output[[i]]$Distance_Sailing_Km[[j]] <- straightlinedist
           sailing_output[[i]]$SailingTime_Hours[[j]] <- straightlinedist / vessel_speed_kmh
 
