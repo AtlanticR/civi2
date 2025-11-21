@@ -30,10 +30,32 @@ A list of data frames (one per harbour) containing:
 }
 }
 \description{
+This function computes the nearest neighbouring harbour for each
+Small Craft Harbour (SCH) site in \code{data_CIVI_Sites} based on both:
+\itemize{
+\item \strong{sailing distance} (using raster-based least-cost path over water
+while avoiding land for Coastal Sites), and
+\item \strong{driving distance} (using the OpenRouteService API).
+}
+}
+\details{
+For sailing distances, the function rasterizes land polygons, assigns
+high movement cost to land cells, and computes shortest paths using
+\pkg{gdistance}. Very close sites (≤100 m) fall back to straight-line
+distance. Driving distances are retrieved via \code{ors_directions()}, using
+one or more API keys if provided.
+
+The function returns either:
+\itemize{
+\item a \strong{short summary} of proximity (value + score), or
+\item \strong{full results}, including distances, times, plots of sailing and driving routes,
+and classification of which mode (sailing/driving) is slower.
+}
+
 This function first calculates proximity between Small Craft Harbours (SCH) sites
 based on sailing distances (least-cost paths avoiding land) while assuming ~
 a speed of 10 knots. It identifies
-neighbouring harbours within 50 km straight-line distance, then estimates
+neighbouring harbours within 20 km straight-line distance, then estimates
 sailing routes while avoiding land using raster least-cost path analysis.
 The function then calculates the driving distances
 using the openrouteservices package. If a waypoint falls on land during the
@@ -41,11 +63,10 @@ sailing computation or a driving distance is not available, it defaults back
 to a straight-line distance and way cross land. For driving distance if
 the straight line computation is used a driving distance of 70 km/h is assumed.
 The final output takes the larger of the sailing and driving distances.
-}
-\details{
+
 Distances are computed in two stages:
 \enumerate{
-\item A straight-line (Haversine) filter to keep neighbours within 50 km.
+\item A straight-line (Haversine) filter to keep neighbours within 20 km.
 \item A least-cost path calculation over a raster with land masked as
 impassable. If routing fails (e.g., waypoints fall on land), the
 function falls back to Haversine distance.
