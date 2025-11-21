@@ -267,7 +267,7 @@ list(
                  mutate(sensitivity = geometricMean(
                    c(ind_coastal_sensitivity_index_Score,
                      abs(6-ind_harbour_condition_Score),
-                     ind_degree_of_protection_Score)))
+                     abs(6-ind_degree_of_protection_Score))))
              },
              tidy_eval = FALSE),
 
