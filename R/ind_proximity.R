@@ -87,7 +87,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
   # Download and buffer land
   land <- ne_download(scale = "large", type = "land", category = "physical", returnclass = "sf") #Downloading the land at large scale
   land_proj <-  "+proj=eqdc +lon_0=-96.328125 +lat_1=45.5659042 +lat_2=76.9551598 +lat_0=61.260532 +datum=WGS84 +units=m +no_defs"
-  land_buffered_wgs84 <- st_transform(land, crs = land_proj) # Changing the projection #32620
+  land_buffered_proj <- st_transform(land, crs = land_proj) # Changing the projection #32620
 
 
   # Function to get 2 nearest neighbours (based on sailing)
@@ -150,7 +150,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
       r[] <- 1  # water = 1
 
       # 4. Rasterize buffered land
-      land_raster <- fasterize(land_buffered_wgs84, r) # This shows us where the land is
+      land_raster <- fasterize(land_buffered_proj, r) # This shows us where the land is
       r[!is.na(land_raster[])] <- 99999999999  # land = impassable
 
       # Determine how easy to move from one waypoint to another
@@ -173,7 +173,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
           sailing_output[[i]]$SailingTime_Hours[[j]] <- straightlinedist / vessel_speed_kmh
 
           driving_output[[i]]$Distance_Driving_Km[[j]] <- straightlinedist
-          driving_output[[i]]$Time_Driving_Km[[j]] <- straightlinedist/50
+          driving_output[[i]]$Time_Driving_Km[[j]] <- straightlinedist/70
 
         } else {
 
@@ -195,7 +195,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
               route_proj <- st_as_sf(path)
               st_crs(route_proj) <- proj
               route_sf <- st_transform(route_proj, crs=4326)
-              land_buffered_wgs84 <- st_transform(land_buffered_wgs84, crs=4326)
+              land_buffered_wgs84 <- st_transform(land_buffered_proj, crs=4326)
 
 
               waypoints_sf <- rbind(sch_df[i,], others[j,]) |> st_transform(4326)
@@ -218,6 +218,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
                 setView(lng = mean(waypoints_sf$Long), lat = mean(waypoints_sf$Lat), zoom = 9) %>%
                 addControl(html = paste0("<h3>", title_text, "</h3>"), position = "topright") %>%
                 addPolygons(data=land_buffered_wgs84, col='brown')
+              # browser()
 
 
               coords <- st_coordinates(route_sf)
@@ -334,7 +335,6 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
     }
   }
 
-  # browser()
 
   ind_proximety <- data.frame(HarbourCode=names(sailing_output), Sailing_Nearest_Neighbour=NA, Sailing_Time=NA, Sailing_Distance=NA, Driving_Nearest_Neighbour=NA, Driving_Distance=NA, Driving_Time=NA, Sailing_Plot=NA, Driving_Plot=NA)
 
