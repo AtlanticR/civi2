@@ -290,7 +290,8 @@ list(
                list(ind_replacement_cost = ind_replacement_cost,
                     ind_harbour_utilization = ind_harbour_utilization,
                     ind_sch_proximity = ind_sch_proximity |>
-                      dplyr::select(HarbourCode,Value,Score)) |>
+                      dplyr::select(HarbourCode,Value,Score) |>
+                      mutate(HarbourCode = as.numeric(HarbourCode))) |>
                  join_comps() |>
                  rowwise() |>
                  mutate(adaptive_capacity = geometricMean(
