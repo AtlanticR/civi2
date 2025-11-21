@@ -85,7 +85,8 @@ list(
   tar_target(data_CIVI_HarbourCondition,
              command={
                # file from Annie Boudreau (SCH)
-               read_excel(file.path(path_to_store(), "data", "2025-08-05 - CIVI Harbour Condition use and capacity.xlsx"))
+               read_excel(file.path(path_to_store(), "data", "2025-08-05 - CIVI Harbour Condition use and capacity.xlsx")) |>
+                 filter(`Harb Code` %in% data_CIVI_Sites$HarbourCode)
              }),
 
 
@@ -259,9 +260,22 @@ list(
   # Components
   tar_target(comp_sensitivity,
              command={
-               list(ind_coastal_sensitivity_index = ind_coastal_sensitivity_index,
+               ind_coastal_sensitivity_index_cleaned <- ind_coastal_sensitivity_index |>
+                 right_join(context_ind_MarineInland, by = "HarbourCode") |>
+                 mutate(Score = if_else(MarineInland == "Inland",
+                                        NaN,
+                                        Score)) |>
+                 dplyr::select(-MarineInland)
+               ind_degree_of_protection_cleaned <- ind_degree_of_protection |>
+                 right_join(context_ind_MarineInland, by = "HarbourCode") |>
+                 mutate(Score = if_else(MarineInland == "Inland",
+                                        NaN,
+                                        Score)) |>
+                 dplyr::select(-MarineInland)
+
+               list(ind_coastal_sensitivity_index = ind_coastal_sensitivity_index_cleaned,
                     ind_harbour_condition = ind_harbour_condition,
-                    ind_degree_of_protection=ind_degree_of_protection) |>
+                    ind_degree_of_protection=ind_degree_of_protection_cleaned) |>
                  join_comps() |>
                  rowwise() |>
                  mutate(sensitivity = geometricMean(
@@ -273,7 +287,14 @@ list(
 
   tar_target(comp_exposure,
              command={
-               list(ind_sea_level_change = ind_sea_level_change,
+               ind_sea_level_change_cleaned <- ind_sea_level_change |>
+                 right_join(context_ind_MarineInland, by = "HarbourCode") |>
+                 mutate(Score = if_else(MarineInland == "Inland",
+                                        NaN,
+                                        Score)) |>
+                 dplyr::select(-MarineInland)
+
+               list(ind_sea_level_change = ind_sea_level_change_cleaned,
                     ind_ice_day_change = ind_ice_day_change) |>
                  join_comps() |>
                  rowwise() |>
@@ -384,7 +405,7 @@ list(
                  mutate(CSDUID = as.character(CSDcode),
                         ind_fishery_reliant_communities = FishingRel)
 
-               test <- context_ind_csd |>
+               context_ind_csd |>
                  as.data.frame() |>
                  left_join(fishingcomm,
                            by = "CSDUID") |>
