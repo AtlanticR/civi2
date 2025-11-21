@@ -175,7 +175,7 @@ list(
                  mutate(HarbourCode = as.numeric(HarbourCode),
                         Value = weighted.mean.CSI_diff,
                         Score=as.numeric(cut(Value,breaks=5, labels=1:5)))|>
-                 select(HarbourCode,Value,Score)
+                 dplyr::select(HarbourCode,Value,Score)
              }),
 
   tar_target(ind_harbour_condition,
@@ -184,7 +184,7 @@ list(
                  mutate(HarbourCode = `Harb Code`,
                         Value = as.numeric(`Harb Condition`),
                         Score = as.numeric(cut(Value,breaks=5, labels=1:5)))|>
-                 select(HarbourCode,Value,Score)
+                 dplyr::select(HarbourCode,Value,Score)
              }),
 
   tar_target(ind_degree_of_protection,
@@ -211,7 +211,7 @@ list(
                  mutate(Value = as.numeric(ssp245_rslc_p50),
                         Score = as.numeric(cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5)),
                         HarbourCode = data_CIVI_Sites$HarbourCode) |>  #TODO document that the Values are in cm
-                 select(HarbourCode,Value,Score)
+                 dplyr::select(HarbourCode,Value,Score)
              }),
 
   tar_target(ind_ice_day_change,
@@ -221,7 +221,7 @@ list(
                  mutate(Value = as.numeric(mean),
                         Score = as.numeric(cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5)),
                         HarbourCode = data_CIVI_Sites$HarbourCode) |>  #TODO document that the Values are in days
-                 select(HarbourCode,Value,Score)
+                 dplyr::select(HarbourCode,Value,Score)
 
              }),
 
@@ -232,7 +232,7 @@ list(
                  group_by(HarbourCode) |>
                  reframe(Value = sum(`Facility Replacement Cost`, na.rm=TRUE)) |>
                  mutate(Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5))) |>
-                 select(HarbourCode,Value,Score)
+                 dplyr::select(HarbourCode,Value,Score)
              }),
 
   tar_target(ind_harbour_utilization,
@@ -241,7 +241,7 @@ list(
                  mutate(HarbourCode = `Harb Code`,
                         Value = as.numeric(`Harbour Utilization`),
                         Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=5, labels=1:5))) |>
-                 select(HarbourCode,Value,Score)
+                 dplyr::select(HarbourCode,Value,Score)
              }),
 
   tar_target(ind_sch_proximity,
@@ -266,16 +266,10 @@ list(
                                         NaN,
                                         Score)) |>
                  dplyr::select(-MarineInland)
-               ind_degree_of_protection_cleaned <- ind_degree_of_protection |>
-                 right_join(context_ind_MarineInland, by = "HarbourCode") |>
-                 mutate(Score = if_else(MarineInland == "Inland",
-                                        NaN,
-                                        Score)) |>
-                 dplyr::select(-MarineInland)
 
                list(ind_coastal_sensitivity_index = ind_coastal_sensitivity_index_cleaned,
                     ind_harbour_condition = ind_harbour_condition,
-                    ind_degree_of_protection=ind_degree_of_protection_cleaned) |>
+                    ind_degree_of_protection=ind_degree_of_protection) |>
                  join_comps() |>
                  rowwise() |>
                  mutate(sensitivity = geometricMean(
@@ -356,10 +350,10 @@ list(
                  dplyr::select(CSDUID,CSDName) |>
                  st_intersection(data_CIVI_Sites) |>
                  as.data.frame() |>
-                 select(-geometry) |>
+                 dplyr::select(-geometry) |>
                  left_join(dplyr::select(csd,CSDUID), by = "CSDUID") |>
                  as.data.frame() |>
-                 select(HarbourCode, CSDUID, CSDName, CSD_Shape = geometry)
+                 dplyr::select(HarbourCode, CSDUID, CSDName, CSD_Shape = geometry)
 
 
              }),
@@ -409,7 +403,7 @@ list(
                  as.data.frame() |>
                  left_join(fishingcomm,
                            by = "CSDUID") |>
-                 select(HarbourCode, ind_fishery_reliant_communities)
+                 dplyr::select(HarbourCode, ind_fishery_reliant_communities)
              }),
 
   tar_target(context_ind_indigenous_community,
