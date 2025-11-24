@@ -123,7 +123,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
     within_25 <- sch_df[dists_haversine <= 25 & dists_haversine >=2, , drop = FALSE]
 
-    if (nrow(within_25) == 1) {
+    if (nrow(within_25) == 0) {
       sailing_output[[i]] <- data.frame(
         Neighbour = NA,
         Distance_Sailing_Km = NA,
@@ -139,6 +139,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
       )
 
     } else {
+      browser()
       sailing_output[[i]] <- data.frame(
         Neighbour = within_25$HarbourCode,
         Distance_Sailing_Km = NA,
