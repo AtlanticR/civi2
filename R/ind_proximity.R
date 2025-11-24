@@ -139,7 +139,6 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
       )
 
     } else {
-      browser()
       sailing_output[[i]] <- data.frame(
         Neighbour = within_25$HarbourCode,
         Distance_Sailing_Km = NA,
