@@ -411,6 +411,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
   # browser()
   # Score
+  ind_proximety_short$Value[ind_proximety_short$Value>1.25] <- NA # cutoff for extremely long times
   ind_proximety_short$Score <- cut(as.vector(transformSkewness(ind_proximety_short$Value)), breaks=4, labels=1:4) |>
     as.numeric()
   ind_proximety_short$Score[is.na(ind_proximety_short$Score)] <- 5
