@@ -216,10 +216,31 @@ list(
 
   tar_target(ind_ice_day_change,
              command={
-               st_extract(data_ice_days, data_CIVI_Sites)|>
+               ice <- st_extract(data_ice_days, data_CIVI_Sites) |>
                  as.data.frame() |>
-                 mutate(Value = as.numeric(mean),
-                        Score = as.numeric(cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5)),
+                 mutate(Value = as.numeric(mean))
+               d <- 10000
+               while(any(is.na(ice$Value))){
+                 message(paste0("Buffering for missing ice day values with distance = ", d, " meters"))
+                 bufferedsites <- data_CIVI_Sites[is.na(ice$Value), ] |>
+                   rowwise() |>
+                   mutate(geometry = st_buffer(geometry,dist = d) |>
+                            st_bbox() |>
+                            st_as_sfc())
+                 # Extract with buffer for NA locations
+                 neighbor_vals <- map_dbl(seq_len(nrow(bufferedsites)), \(i) {
+                   aggregate(data_ice_days, bufferedsites[i,], FUN = mean, na.rm = TRUE) |>
+                     as.numeric()
+                 })
+
+
+                 ice$Value[is.na(ice$Value)] <- neighbor_vals
+                 d <- d + 10000
+               }
+
+
+               ice |>
+                 mutate(Score = as.numeric(cut(as.vector(transformSkewness(abs(Value))), breaks=5, labels=1:5)),
                         HarbourCode = data_CIVI_Sites$HarbourCode) |>  #TODO document that the Values are in days
                  dplyr::select(HarbourCode,Value,Score)
 
@@ -488,7 +509,17 @@ list(
                  full_join(context_ind_csd, by="HarbourCode") %>%
                  full_join(context_ind_population, by="HarbourCode") %>%
                  full_join(context_ind_fishery_reliant_communities, by="HarbourCode") %>%
-                 full_join(context_ind_indigenous_community, by="HarbourCode")
+                 full_join(context_ind_indigenous_community, by="HarbourCode") %>%
+                 full_join(ind_sch_proximity %>%
+                             mutate(HarbourCode = as.numeric(HarbourCode)) %>%
+                             dplyr::select(HarbourCode,
+                                           ind_sch_proximity_Sailing_Nearest_Neighbour=Sailing_Nearest_Neighbour,
+                                           ind_sch_proximity_Sailing_Time=Sailing_Time,
+                                           ind_sch_proximity_Sailing_Distance=Sailing_Distance,
+                                           ind_sch_proximity_Driving_Nearest_Neighbour=Driving_Nearest_Neighbour,
+                                           ind_sch_proximity_Driving_Distance=Driving_Distance,
+                                           ind_sch_proximity_Driving_Time=Driving_Time),
+                           by="HarbourCode")
                # Turn Province names into acronyms
                full_names <- unique(data_CIVI_Sites$Province)
 
