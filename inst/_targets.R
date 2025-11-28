@@ -185,7 +185,7 @@ list(
 
   tar_target(ind_coastal_sensitivity_index,
              command={
-               data_CSIScore_Intersection |>
+               data_CSIScore_Intersection_2000s |>
                  mutate(HarbourCode = as.numeric(HarbourCode),
                         Value = weighted.mean.CSI_diff,
                         Score=as.numeric(cut(Value,breaks=5, labels=1:5)))|>
