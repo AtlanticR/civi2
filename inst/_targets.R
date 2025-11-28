@@ -173,7 +173,7 @@ list(
                  name_sites = "HarbourCode",
                  sfLines = data_CANCOAST_CSI_V2_5_6,
                  name_sfLines_variable = "CSI_2000s",
-                 n_cores = 7,
+                 n_cores = 3,
                  max_size = 10000*1024^2
 
                )
@@ -187,7 +187,7 @@ list(
              command={
                data_CSIScore_Intersection_2000s |>
                  mutate(HarbourCode = as.numeric(HarbourCode),
-                        Value = weighted.mean.CSI_diff,
+                        Value = weighted.mean.CSI_2000s,
                         Score=as.numeric(cut(Value,breaks=5, labels=1:5)))|>
                  dplyr::select(HarbourCode,Value,Score)
              }),
