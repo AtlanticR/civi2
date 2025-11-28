@@ -181,6 +181,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
       others <- within_25[!(within_25$HarbourCode == sch_df$HarbourCode[i]),]
 
+
       for (j in seq_along(others$HarbourCode)) {
         p2 <- st_coordinates(others[j, ])
 
@@ -222,7 +223,6 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
               setView(lng = mean(waypoints_sf$Long), lat = mean(waypoints_sf$Lat), zoom = 9) %>%
               addControl(html = paste0("<h3>", title_text, "</h3>"), position = "topright") %>%
               addPolygons(data=land_buffered_wgs84, col='brown')
-            # browser()
 
 
             coords <- st_coordinates(route_sf)
@@ -339,77 +339,54 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
   }
 
 
-  ind_proximety <- data.frame(HarbourCode=names(sailing_output), Sailing_Nearest_Neighbour=NA, Sailing_Time=NA, Sailing_Distance=NA, Driving_Nearest_Neighbour=NA, Driving_Distance=NA, Driving_Time=NA, Sailing_Plot=NA, Driving_Plot=NA)
-
-  #browser()
+  ind_proximety <- data.frame(HarbourCode=names(sailing_output), Nearest_Neighbour=NA, Sailing_Time=NA, Sailing_Distance=NA, Driving_Distance=NA, Driving_Time=NA, Sailing_Plot=NA, Driving_Plot=NA,
+                              Longest_Time=NA)
   for (i in seq_along(sailing_output)) {
     message("i=", i)
     message("sailing output i = ", i)
-    if (!(all(is.na(sailing_output[[i]]$Distance_Sailing_Km)))) {
-      keep <- which(sailing_output[[i]]$Distance_Sailing_Km == min(sailing_output[[i]]$Distance_Sailing_Km, na.rm=TRUE))
-      if (length(keep) == 1) {
-        ind_proximety$Sailing_Nearest_Neighbour[i] <- sailing_output[[i]]$Neighbour[keep]
-      } else {
-        ind_proximety$Sailing_Nearest_Neighbour[i] <- paste0(sailing_output[[i]]$Neighbour[keep], collapse=" & ")
-
-      }
-      ind_proximety$Sailing_Distance[i] <- sailing_output[[i]]$Distance_Sailing_Km[keep][1]
-      ind_proximety$Sailing_Plot[i] <- sailing_output[[i]]$plot[keep][1]
-      ind_proximety$Sailing_Time[i] <- sailing_output[[i]]$SailingTime_Hours[keep][1]
-    }
-
-
-    if (!(all(is.na(driving_output[[i]]$Distance_Driving_Km)))) { #NOTE: Problem that is found some within a straight line distance, but no driving available
-      keep <- which(driving_output[[i]]$Distance_Driving_Km == min(driving_output[[i]]$Distance_Driving_Km, na.rm=TRUE))
-      ind_proximety$Driving_Nearest_Neighbour[i] <- driving_output[[i]]$Neighbour[keep]
-      ind_proximety$Driving_Distance[i] <- driving_output[[i]]$Distance_Driving_Km[keep]
-      ind_proximety$Driving_Time[i] <- driving_output[[i]]$Time_Driving_Km[keep]
-
-      ind_proximety$Driving_Plot[i] <- driving_output[[i]]$plot[keep]
-    }
-  }
-
-  ind_proximety$Result <- NA
-
-  # browser()
-
-
-  ind_proximety_short <- data.frame(HarbourCode=names(sailing_output), Value=NA, Score=NA)
-  for (i in seq_along(ind_proximety$HarbourCode)) {
-    message("proximity output i = ", i)
-
-    if (!(all(is.na(ind_proximety[i, c("Sailing_Time", "Driving_Time")])))) { # Checking if they're both NA
-      max_result <- max(ind_proximety$Sailing_Time[i], ind_proximety$Driving_Time[i],na.rm=TRUE)
-
-      ind_proximety_short$Value[i] <- max_result
-      if (is.na(max_result)) {
-        ind_proximety$Result[i] <- "Neither"
-      } else if (!(any(c(is.na(ind_proximety$Driving_Time[i]), is.na(ind_proximety$Sailing_Time[i]))))) {
-        # None are NA
-        if (ind_proximety$Sailing_Time[i] == max_result && ind_proximety$Driving_Time[i] == max_result) {
-          ind_proximety$Result[i] <- "Same"
-        } else if (ind_proximety$Sailing_Time[i] == max_result) {
-          ind_proximety$Result[i] <- "Sailing"
-        } else {
-          ind_proximety$Result[i] <- "Driving"
-        }
-      } else {
-        # One is NA (but not all)
-        if (!(is.na(ind_proximety$Sailing_Time[i]))) {
-          ind_proximety$Result[i] <- "Sailing"
-        } else {
-          ind_proximety$Result[i] <- "Driving"
-
-        }
+    if (!(all(is.na(sailing_output[[i]]$Distance_Sailing_Km))) & !(all(is.na(driving_output[[i]]$Time_Driving_Km)))) {
+      # THERE IS BOTH DRIVING AND SAILING
+      max_values <- NULL
+      for (j in seq_along(sailing_output[[i]]$Neighbour)) {
+        max_values[j] <- max(sailing_output[[i]]$SailingTime_Hours[j], driving_output[[i]]$Time_Driving_Km[j], na.rm=TRUE)
       }
 
+    } else if (!(all(is.na(driving_output[[i]]$Neighbour)))) {
+      # THERE IS DRIVING BUT NOT SAILING
+      max_values <- max(driving_output[[i]]$Time_Driving_Km)
+
+    } else if (!(all(is.na(sailing_output[[i]]$Neighbour)))) {
+      # THERE IS SAILING BUT NOT DRIVING
+      max_values <- max(sailing_output[[i]]$SailingTime_Hours)
     } else {
-      ind_proximety$Result[i] <- "Neither"
-      ind_proximety_short$Value[i] <- NA
+      # NO DRIVING OR SAILING
+      max_values <- NA
     }
+
+    if (!(all(is.na(max_values)))) {
+      ind_proximety$Longest_Time[i] <- min(max_values, na.rm=TRUE)
+      keep_nearest <- which(max_values == ind_proximety$Longest_Time[i])[1]
+      ind_proximety$Nearest_Neighbour[i] <- sailing_output[[i]]$Neighbour[keep_nearest]
+
+      ind_proximety$Sailing_Time[i] <- sailing_output[[i]]$SailingTime_Hours[keep_nearest]
+      ind_proximety$Driving_Time[i] <- driving_output[[i]]$Time_Driving_Km[keep_nearest]
+
+      ind_proximety$Sailing_Distance[i] <- sailing_output[[i]]$Distance_Sailing_Km[keep_nearest]
+      ind_proximety$Driving_Distance[i] <- driving_output[[i]]$Distance_Driving_Km[keep_nearest]
+      ind_proximety$Sailing_Plot[i] <- sailing_output[[i]]$plot[keep_nearest]
+      ind_proximety$Driving_Plot[i] <- driving_output[[i]]$plot[keep_nearest]
+    } else {
+      ind_proximety$Longest_Time[i] <- NA
+
+    }
+
+
   }
 
-  # browser()
+  #browser()
+
+  ind_proximety_short <- data.frame(HarbourCode=names(sailing_output), Value=ind_proximety$Longest_Time, Score=NA)
+
   # Score
   ind_proximety_short$Value[ind_proximety_short$Value>1.25] <- NA # cutoff for extremely long times
   ind_proximety_short$Score <- cut(as.vector(transformSkewness(ind_proximety_short$Value)), breaks=4, labels=1:4) |>
