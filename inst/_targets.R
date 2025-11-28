@@ -165,6 +165,20 @@ list(
                )
              }),
 
+  tar_target(data_CSIScore_Intersection_2000s,
+             command = {
+               future_siteBufferToMultiLineIntersection(
+                 sites = data_CIVI_Sites |>
+                   filter(HarbourCode %in% context_ind_MarineInland$HarbourCode[context_ind_MarineInland$MarineInland=="Marine"]),
+                 name_sites = "HarbourCode",
+                 sfLines = data_CANCOAST_CSI_V2_5_6,
+                 name_sfLines_variable = "CSI_2000s",
+                 n_cores = 7,
+                 max_size = 10000*1024^2
+
+               )
+             }),
+
 
 
   # Indicators
