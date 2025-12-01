@@ -527,10 +527,9 @@ list(
                  full_join(ind_sch_proximity %>%
                              mutate(HarbourCode = as.numeric(HarbourCode)) %>%
                              dplyr::select(HarbourCode,
-                                           ind_sch_proximity_Sailing_Nearest_Neighbour=Sailing_Nearest_Neighbour,
+                                           ind_sch_proximity_Nearest_Neighbour=Nearest_Neighbour,
                                            ind_sch_proximity_Sailing_Time=Sailing_Time,
                                            ind_sch_proximity_Sailing_Distance=Sailing_Distance,
-                                           ind_sch_proximity_Driving_Nearest_Neighbour=Driving_Nearest_Neighbour,
                                            ind_sch_proximity_Driving_Distance=Driving_Distance,
                                            ind_sch_proximity_Driving_Time=Driving_Time),
                            by="HarbourCode")
