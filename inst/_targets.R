@@ -11,7 +11,7 @@ pkgs <- c("AtlanticR/civi2",
           "future.apply",
           "dplyr",
           "purrr",
-          "crew",
+          #"crew",
           "geosphere",
           "rnaturalearth",
           "raster",
@@ -188,7 +188,7 @@ list(
                data_CSIScore_Intersection_2000s |>
                  mutate(HarbourCode = as.numeric(HarbourCode),
                         Value = weighted.mean.CSI_2000s,
-                        Score=as.numeric(cut(Value,breaks=5, labels=1:5)))|>
+                        Score=as.numeric(cut(transformSkewness(Value),breaks=5, labels=1:5)))|>
                  dplyr::select(HarbourCode,Value,Score)
              }),
 
@@ -211,10 +211,10 @@ list(
                  keep <- which(x$HarbourCode == df$HarbourCode[i])
                  if (!(length(keep) == 0)) {
                  df$Value[i] <- x$DegreeOfProtection[keep]
-                 df$Score[i] <- x$DegreeOfProtection[keep]
                  }
                }
 
+               df$Score <- as.numeric(cut(as.vector(transformSkewness(df$Value)), breaks=5, labels=1:5))
                df
              }),
 
@@ -287,12 +287,22 @@ list(
 
                sites <- data_CIVI_Sites |>
                  dplyr::select(-MarineInland) |>
-                 left_join(context_ind_MarineInland, by = "HarbourCode")
+                 left_join(context_ind_MarineInland, by = "HarbourCode") |>
+                 filter(MarineInland == "Marine")
 
-                ind_proximity(data_CIVI_Sites=sites, ors_api_key=ors_api_keys, full_results=TRUE)
+
+                marineSites <- ind_proximity(data_CIVI_Sites=sites, ors_api_key=ors_api_keys, full_results=TRUE)
+
+                x <- marineSites %>%
+                  mutate(HarbourCode = as.numeric(HarbourCode)) |>
+                  full_join(dplyr::select(context_ind_MarineInland,HarbourCode, MarineInland), by = "HarbourCode") |>
+                  mutate(Value = if_else(MarineInland == "Inland", NaN, Value),
+                         Score = if_else(MarineInland == "Inland", NaN, Score)) |>
+                  dplyr::select(-MarineInland)
+                x
              }),
 
-  # Components
+  # Componentsd
   tar_target(comp_sensitivity,
              command={
                ind_coastal_sensitivity_index_cleaned <- ind_coastal_sensitivity_index |>

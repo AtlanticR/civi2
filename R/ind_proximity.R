@@ -91,7 +91,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
 
 
   # FIND SAILING DISTANCES
-  sch_df <- data_CIVI_Sites[which(data_CIVI_Sites$Administration == "SCH"),] |>
+  sch_df <- data_CIVI_Sites |>
     st_transform(proj)
 
 
@@ -348,7 +348,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
       # THERE IS BOTH DRIVING AND SAILING
       max_values <- NULL
       for (j in seq_along(sailing_output[[i]]$Neighbour)) {
-        max_values[j] <- max(sailing_output[[i]]$SailingTime_Hours[j], driving_output[[i]]$Time_Driving_Km[j], na.rm=TRUE)
+        max_values[j] <- max(sailing_output[[i]]$SailingTime_Hours[j], driving_output[[i]]$Time_Driving_Km[j])
       }
 
     } else if (!(all(is.na(driving_output[[i]]$Neighbour)))) {
@@ -364,7 +364,7 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
     }
 
     if (!(all(is.na(max_values)))) {
-      ind_proximety$Longest_Time[i] <- min(max_values, na.rm=TRUE)
+      ind_proximety$Longest_Time[i] <- ifelse(!(all(is.na(max_values))), min(max_values, na.rm=TRUE), NA)
       keep_nearest <- which(max_values == ind_proximety$Longest_Time[i])[1]
       ind_proximety$Nearest_Neighbour[i] <- sailing_output[[i]]$Neighbour[keep_nearest]
 
@@ -384,6 +384,8 @@ ind_proximity <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NULL, ful
   }
 
   #browser()
+
+
 
   ind_proximety_short <- data.frame(HarbourCode=names(sailing_output), Value=ind_proximety$Longest_Time, Score=NA)
 
