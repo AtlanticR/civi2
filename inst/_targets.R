@@ -302,6 +302,15 @@ list(
                 x
              }),
 
+  tar_target(ind_sch_proximity_lakes,
+             command={
+               ors_api_keys <- read.csv(file.path(path_to_store(),"data","ors_api_key.csv")) |>
+                 pull(key) |>
+                 unlist()
+
+               ind_proximity_lakes(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=ors_api_keys, full_results=TRUE)
+             }),
+
   # Componentsd
   tar_target(comp_sensitivity,
              command={
@@ -349,7 +358,7 @@ list(
              command={
                list(ind_replacement_cost = ind_replacement_cost,
                     ind_harbour_utilization = ind_harbour_utilization,
-                    ind_sch_proximity = ind_sch_proximity |>
+                    ind_sch_proximity_lakes = ind_sch_proximity_lakes |>
                       dplyr::select(HarbourCode,Value,Score) |>
                       mutate(HarbourCode = as.numeric(HarbourCode))) |>
                  join_comps() |>
@@ -534,7 +543,7 @@ list(
                  full_join(context_ind_population, by="HarbourCode") %>%
                  full_join(context_ind_fishery_reliant_communities, by="HarbourCode") %>%
                  full_join(context_ind_indigenous_community, by="HarbourCode") %>%
-                 full_join(ind_sch_proximity %>%
+                 full_join(ind_sch_proximity_lakes %>%
                              mutate(HarbourCode = as.numeric(HarbourCode)) %>%
                              dplyr::select(HarbourCode,
                                            ind_sch_proximity_Nearest_Neighbour=Nearest_Neighbour,
