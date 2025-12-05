@@ -127,7 +127,7 @@ ind_proximity_lakes <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NUL
       matrix(c(sch_df$Long, sch_df$Lat), ncol=2)
     ) / 1000
 
-    within_25 <- sch_df[dists_haversine <= 25 & dists_haversine >=2, , drop = FALSE]
+    within_25 <- sch_df[dists_haversine <= 25 & dists_haversine >=0.5, , drop = FALSE]
 
     if (nrow(within_25) == 0) {
       sailing_output[[i]] <- data.frame(
