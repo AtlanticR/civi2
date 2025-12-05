@@ -358,7 +358,7 @@ list(
              command={
                list(ind_replacement_cost = ind_replacement_cost,
                     ind_harbour_utilization = ind_harbour_utilization,
-                    ind_sch_proximity_lakes = ind_sch_proximity_lakes |>
+                    ind_sch_proximity = ind_sch_proximity_lakes |>
                       dplyr::select(HarbourCode,Value,Score) |>
                       mutate(HarbourCode = as.numeric(HarbourCode))) |>
                  join_comps() |>
