@@ -279,6 +279,7 @@ list(
                  dplyr::select(HarbourCode,Value,Score)
              }),
 
+  #we don't use this one anymore because it does not have lakes, keeping anyway
   tar_target(ind_sch_proximity,
              command={
                ors_api_keys <- read.csv(file.path(path_to_store(),"data","ors_api_key.csv")) |>
@@ -302,6 +303,7 @@ list(
                 x
              }),
 
+#this is the proximity function that we will use.  The values produced by this function actually represent distance and not proximity, so they are in a reversed orientation
   tar_target(ind_sch_proximity_lakes,
              command={
                ors_api_keys <- read.csv(file.path(path_to_store(),"data","ors_api_key.csv")) |>
@@ -311,7 +313,7 @@ list(
                ind_proximity_lakes(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=ors_api_keys, full_results=TRUE)
              }),
 
-  # Componentsd
+  # Components
   tar_target(comp_sensitivity,
              command={
                ind_coastal_sensitivity_index_cleaned <- ind_coastal_sensitivity_index |>
@@ -360,7 +362,8 @@ list(
                     ind_harbour_utilization = ind_harbour_utilization,
                     ind_sch_proximity = ind_sch_proximity_lakes |>
                       dplyr::select(HarbourCode,Value,Score) |>
-                      mutate(HarbourCode = as.numeric(HarbourCode))) |>
+                      mutate(HarbourCode = as.numeric(HarbourCode),
+                             Score = abs(6-Score))) |>#flipping proximity to represent proximity instead of distance
                  join_comps() |>
                  rowwise() |>
                  mutate(adaptive_capacity = geometricMean(
