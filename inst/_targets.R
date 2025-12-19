@@ -179,16 +179,25 @@ list(
                )
              }),
 
+####KF#
+tar_target(data_distance,
+           command={
+             ors_api_keys <- read.csv(file.path(path_to_store(),"data","ors_api_key.csv")) |>
+               pull(key) |>
+               unlist()
 
+             ind_proximity_lakes(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=ors_api_keys, full_results=TRUE)
+           }),
 
   # Indicators
 
   tar_target(ind_coastal_sensitivity_index,
              command={
+               breaks <- c(-10000000, -500, -150, 150, 500, 10000000)
                data_CSIScore_Intersection_2000s |>
                  mutate(HarbourCode = as.numeric(HarbourCode),
                         Value = weighted.mean.CSI_2000s,
-                        Score=as.numeric(cut(transformSkewness(Value),breaks=5, labels=1:5)))|>
+                        Score=as.numeric(cut(transformSkewness(Value),breaks=breaks, labels=1:5)))|>
                  dplyr::select(HarbourCode,Value,Score)
              }),
 
@@ -279,41 +288,63 @@ list(
                  dplyr::select(HarbourCode,Value,Score)
              }),
 
-  #we don't use this one anymore because it does not have lakes, keeping anyway
-  tar_target(ind_sch_proximity,
-             command={
-               ors_api_keys <- read.csv(file.path(path_to_store(),"data","ors_api_key.csv")) |>
-                 pull(key) |>
-                 unlist()
+  #This is the remenants of the original function that did not include lakes...remove -KF
+#  tar_target(ind_sch_proximity,
+#             command={
+#               ors_api_keys <- read.csv(file.path(path_to_store(),"data","ors_api_key.csv")) |>
+#                 pull(key) |>
+#                 unlist()
+#
+#               sites <- data_CIVI_Sites |>
+#                 dplyr::select(-MarineInland) |>
+#                 left_join(context_ind_MarineInland, by = "HarbourCode") |>
+#                 filter(MarineInland == "Marine")
+#
+#
+#                marineSites <- ind_proximity(data_CIVI_Sites=sites, ors_api_key=ors_api_keys, full_results=TRUE)
+#
+#                x <- marineSites %>%
+#                  mutate(HarbourCode = as.numeric(HarbourCode)) |>
+#                  full_join(dplyr::select(context_ind_MarineInland,HarbourCode, MarineInland), by = "HarbourCode") |>
+#                  mutate(Value = if_else(MarineInland == "Inland", NaN, Value),
+#                         Score = if_else(MarineInland == "Inland", NaN, Score)) |>
+#                  dplyr::select(-MarineInland)
+#                x
+#            }),
 
-               sites <- data_CIVI_Sites |>
-                 dplyr::select(-MarineInland) |>
-                 left_join(context_ind_MarineInland, by = "HarbourCode") |>
-                 filter(MarineInland == "Marine")
+#this is the proximity function that we will use.
+#The values produced by this function actually represent distance and not proximity,
+#so they are in a reversed orientation
+#new plan, :
+#1)run the distance function separately and generate data as a target (driving and sailint)
+#2)score and reverse them to create ind_sch_proximity_lakes
+#the function has been altered to only generate distance data so this will go up in the data section , -KF
+#  tar_target(ind_sch_proximity_lakes,
+#             command={
+#               ors_api_keys <- read.csv(file.path(path_to_store(),"data","ors_api_key.csv")) |>
+#                 pull(key) |>
+#                 unlist()
+#
+#               ind_proximity_lakes(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=ors_api_keys, full_results=TRUE)
+#             }),
+#the indicator target will create the scores
+
+####kf
+#tar_target(ind_sch_proximity_lakes
+tar_target(ind_sch_proximity_lakes,
+           command={
+             data_distance |>
+               mutate(
+                 Value = ifelse(Value > 1.25, NA, Value),# cutoff for extremely long times
+                 Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=4, labels=1:4)),#redistribute and score non na vals
+                 Score[is.na(Score)] = 5,  #score NA at 5
+                 HarbourCode = as.numeric(HarbourCode),
+                 Score = abs(6-Score)) |> #reverse the order of the scores to turn diatance to proximity
+               dplyr::select(HarbourCode,Value,Score)
+           }),
 
 
-                marineSites <- ind_proximity(data_CIVI_Sites=sites, ors_api_key=ors_api_keys, full_results=TRUE)
-
-                x <- marineSites %>%
-                  mutate(HarbourCode = as.numeric(HarbourCode)) |>
-                  full_join(dplyr::select(context_ind_MarineInland,HarbourCode, MarineInland), by = "HarbourCode") |>
-                  mutate(Value = if_else(MarineInland == "Inland", NaN, Value),
-                         Score = if_else(MarineInland == "Inland", NaN, Score)) |>
-                  dplyr::select(-MarineInland)
-                x
-             }),
-
-#this is the proximity function that we will use.  The values produced by this function actually represent distance and not proximity, so they are in a reversed orientation
-  tar_target(ind_sch_proximity_lakes,
-             command={
-               ors_api_keys <- read.csv(file.path(path_to_store(),"data","ors_api_key.csv")) |>
-                 pull(key) |>
-                 unlist()
-
-               ind_proximity_lakes(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=ors_api_keys, full_results=TRUE)
-             }),
-
-  # Components
+# Components
   tar_target(comp_sensitivity,
              command={
                ind_coastal_sensitivity_index_cleaned <- ind_coastal_sensitivity_index |>
@@ -360,10 +391,10 @@ list(
              command={
                list(ind_replacement_cost = ind_replacement_cost,
                     ind_harbour_utilization = ind_harbour_utilization,
-                    ind_sch_proximity = ind_sch_proximity_lakes |>
-                      dplyr::select(HarbourCode,Value,Score) |>
-                      mutate(HarbourCode = as.numeric(HarbourCode),
-                             Score = abs(6-Score))) |>#flipping proximity to represent proximity instead of distance
+                    ind_sch_proximity = ind_sch_proximity_lakes) #### |>  begin removing -KF
+                     # dplyr::select(HarbourCode,Value,Score) |>
+                     # mutate(HarbourCode = as.numeric(HarbourCode),
+                     #        Score = abs(6-Score))) |>#### up to here - KF
                  join_comps() |>
                  rowwise() |>
                  mutate(adaptive_capacity = geometricMean(
