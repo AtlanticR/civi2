@@ -117,7 +117,7 @@ ind_proximity_lakes <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NUL
 
   # Function to get 2 nearest neighbours (based on sailing)
   for (i in seq_along(sch_df$HarbourCode)) {
-
+#for (i in 1:3) {
     message(paste0("i = ", i, " HarbourCode = ", sch_df$HarbourCode[i]))
     #others <- sch_df[-i, ]
 
@@ -388,17 +388,17 @@ ind_proximity_lakes <- function(data_CIVI_Sites=data_CIVI_Sites, ors_api_key=NUL
 
 
 
-  ind_proximety_short <- data.frame(HarbourCode=names(sailing_output), Value=ind_proximety$Longest_Time, Score=NA)
+  ind_proximety_short <- data.frame(HarbourCode=names(sailing_output), Value=ind_proximety$Longest_Time)
 
-  # Score
-  ind_proximety_short$Value[ind_proximety_short$Value>1.25] <- NA # cutoff for extremely long times
-  ind_proximety_short$Score <- cut(as.vector(transformSkewness(ind_proximety_short$Value)), breaks=4, labels=1:4) |>
-    as.numeric()
-  ind_proximety_short$Score[is.na(ind_proximety_short$Score)] <- 5
+  # Score- now we will do this in _Targets
+#  ind_proximety_short$Value[ind_proximety_short$Value>1.25] <- NA # cutoff for extremely long times
+#  ind_proximety_short$Score <- cut(as.vector(transformSkewness(ind_proximety_short$Value)), breaks=4, labels=1:4) |>
+#    as.numeric()
+#  ind_proximety_short$Score[is.na(ind_proximety_short$Score)] <- 5
 
 
   if (!(full_results)) {
-    ind_proximety_short <- ind_proximety_short[,c("HarbourCode", "Value", "Score")]
+    ind_proximety_short <- ind_proximety_short[,c("HarbourCode", "Value")]
   }
 
 
