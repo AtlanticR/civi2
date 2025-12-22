@@ -337,7 +337,7 @@ tar_target(ind_sch_proximity_lakes,
                mutate(
                  Value = ifelse(Value > 1.25, NA, Value),# cutoff for extremely long times
                  Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=4, labels=1:4)),#redistribute and score non na vals
-                 Score[is.na(Score)] = 5,  #score NA at 5
+                 Score[is.na(Score)] <- 5,  #score NA at 5
                  HarbourCode = as.numeric(HarbourCode),
                  Score = abs(6-Score)) |> #reverse the order of the scores to turn diatance to proximity
                dplyr::select(HarbourCode,Value,Score)
@@ -391,7 +391,7 @@ tar_target(ind_sch_proximity_lakes,
              command={
                list(ind_replacement_cost = ind_replacement_cost,
                     ind_harbour_utilization = ind_harbour_utilization,
-                    ind_sch_proximity = ind_sch_proximity_lakes) #### |>  begin removing -KF
+                    ind_sch_proximity = ind_sch_proximity_lakes) |> #### |>  begin removing -KF
                      # dplyr::select(HarbourCode,Value,Score) |>
                      # mutate(HarbourCode = as.numeric(HarbourCode),
                      #        Score = abs(6-Score))) |>#### up to here - KF
@@ -577,7 +577,7 @@ tar_target(ind_sch_proximity_lakes,
                  full_join(context_ind_population, by="HarbourCode") %>%
                  full_join(context_ind_fishery_reliant_communities, by="HarbourCode") %>%
                  full_join(context_ind_indigenous_community, by="HarbourCode") %>%
-                 full_join(ind_sch_proximity_lakes %>%
+                 full_join(data_distance %>%
                              mutate(HarbourCode = as.numeric(HarbourCode)) %>%
                              dplyr::select(HarbourCode,
                                            ind_sch_proximity_Nearest_Neighbour=Nearest_Neighbour,
