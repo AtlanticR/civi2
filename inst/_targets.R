@@ -334,14 +334,15 @@ tar_target(data_distance,
 #tar_target(ind_sch_proximity_lakes
 tar_target(ind_sch_proximity_lakes,
            command={
-             data_distance |>
+            x <-  data_distance |>
                mutate(
                  Value = ifelse(Value > 1.25, NA, Value),# cutoff for extremely long times
                  Score = as.numeric(cut(as.vector(transformSkewness(Value)), breaks=4, labels=1:4)),#redistribute and score non na vals
-                 Score[is.na(Score)] <- 5,  #score NA at 5
+                 Score = replace(Score, is.na(Score), 5),
                  HarbourCode = as.numeric(HarbourCode),
                  Score = abs(6-Score)) |> #reverse the order of the scores to turn diatance to proximity
                dplyr::select(HarbourCode,Value,Score)
+            x
            }),
 
 
