@@ -194,11 +194,12 @@ tar_target(data_distance,
   tar_target(ind_coastal_sensitivity_index,
              command={
                breaks <- c(-10000000, -500, -150, 150, 500, 10000000)
-               data_CSIScore_Intersection_2000s |>
+               x <- data_CSIScore_Intersection_2000s |>
                  mutate(HarbourCode = as.numeric(HarbourCode),
                         Value = weighted.mean.CSI_2000s,
-                        Score=as.numeric(cut(transformSkewness(Value),breaks=breaks, labels=1:5)))|>
+                        Score=as.numeric(cut(Value,breaks=breaks, labels=1:5)))|>
                  dplyr::select(HarbourCode,Value,Score)
+               x
              }),
 
   tar_target(ind_harbour_condition,
