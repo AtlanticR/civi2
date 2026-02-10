@@ -1,3 +1,5 @@
+
+
 if(!require(librarian)) install.packages("librarian")
 pkgs <- c("AtlanticR/civi2",
           "targets",
@@ -668,8 +670,8 @@ tar_target(ind_sch_proximity_lakes,
 )
 
 #the final target doesn't work so i have been running it separately, outside
-tar_load(CIVI)
-write.csv(CIVI |>
-            dplyr::select(-geometry.x,-geometry.y),
-          file.path(path_to_store(),"data","CIVI.csv"),
-          row.names = FALSE)
+#tar_load(CIVI)
+#write.csv(CIVI |>
+#            dplyr::select(-geometry.x,-geometry.y),
+#          file.path(path_to_store(),"data","CIVI.csv"),
+#          row.names = FALSE)
