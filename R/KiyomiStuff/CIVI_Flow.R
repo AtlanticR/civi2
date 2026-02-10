@@ -1,11 +1,18 @@
-#to get that latest version/ updates:
-#git checkout main
-#git pull origin main
-#3) install the latest civi2 package
+#Start by getting the latest version/ updates:
+#1) git checkout main
+#2) git pull origin main
+#3) install the latest civi2 package & load the packages
+install.packages("remotes")
+remotes::install_github("AtlanticR/civi2")
 #4) make any edits that i need to _targets.R
-#5) tar_visnetwork(script = "inst/_targets.R") ...to see what is out of date
-#6) tar_make(script = "inst/_targets.R") ...to produce the new data.
-#7) and the new file at the end will appear:"\\wpnsbio9039519.mar.dfo-mpo.ca\sambashare\CIVI\civi2\data\CIVI.csv"
+#5) if the file hasn't actually changed run tar_invalidate("CIVI.csv")
+      #the invalidate thing was needed because the CIVI.csv target had not changed, so it wasn't outdated, so it wasn't running. When you ran the invalidate command, you were telling targets that the target WAS in fact outdated and it should re-run it
+      #targets doesn't track the files written by a target unless you add format = "file" to the arguments and the 'last thing' you call is the file path to the file. Which is maybe something we should do?
+#6) tar_visnetwork(script = "inst/_targets.R") ...to see what is out of date
+#7) tar_make(script = "inst/_targets.R") ...to produce the new data.
+#8) and the new file at the end will appear:"\\wpnsbio9039519.mar.dfo-mpo.ca\sambashare\CIVI\civi2\data\CIVI.csv"
+
+#if you tar_load("data_CIVI_Sites") first, you can work within the tar commands (on smaller thinsgs) without re-running everything.
 
 library (DiagrammeR)
 library(DiagrammeRsvg)
