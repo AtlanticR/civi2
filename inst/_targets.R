@@ -39,6 +39,7 @@ path_to_store <- function(){
   return(store)
 }
 
+
 tar_config_set(store = path_to_store())
 
 
@@ -621,7 +622,38 @@ tar_target(ind_sch_proximity_lakes,
                }
 
                y |>
-                 dplyr::select(-CSD_Shape)
+                 dplyr::select(-CSD_Shape) |>
+                 #add categorical columns
+                 dplyr::mutate(
+                   sensitivity_cat = cut(
+                     sensitivity,
+                     breaks = 1:6,
+                     labels = 1:5,
+                     right = FALSE,
+                     include.lowest = TRUE
+                   ),
+                   exposure_cat = cut(
+                     exposure,
+                     breaks = 1:6,
+                     labels = 1:5,
+                     right = FALSE,
+                     include.lowest = TRUE
+                   ),
+                   adaptive_capacity_cat = cut(
+                     adaptive_capacity,
+                     breaks = 1:6,
+                     labels = 1:5,
+                     right = FALSE,
+                     include.lowest = TRUE
+                   ),
+                   CIVI_cat = cut(
+                     CIVI,
+                     breaks = 1:6,
+                     labels = 1:5,
+                     right = FALSE,
+                     include.lowest = TRUE
+                   )
+                 )
 
              }),
 
@@ -635,3 +667,8 @@ tar_target(ind_sch_proximity_lakes,
 
 )
 
+#the final target doesn't work so i have been running it separately, outside
+write.csv(CIVI |>
+            dplyr::select(-geometry.x,-geometry.y),
+          file.path(path_to_store(),"data","CIVI.csv"),
+          row.names = FALSE)
