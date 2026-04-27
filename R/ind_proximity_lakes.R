@@ -1,36 +1,31 @@
-#' Compute proximity metrics for SCH harbours
+#' Calculate proximity metrics for harbour sites using sailing and driving routes
 #'
-#' This function computes the nearest neighbouring harbour for each
-#' Small Craft Harbour (SCH) site in `data_CIVI_Sites` based on both:
-#' * **sailing distance** (using raster-based least-cost path over water
-#'   while avoiding land for Coastal Sites), and
-#' * **driving distance** (using the OpenRouteService API).
+#' This function computes the nearest neighbouring harbour for each Small Craft
+#' Harbour (SCH) site in `data_CIVI_Sites` using both:
+#' \itemize{
+#'   \item \strong{Sailing distance}: raster-based least-cost path analysis over
+#'   water while avoiding both land and lakes
+#'   \item \strong{Driving distance}: road-network routing using the
+#'   OpenRouteService API
+#' }
 #'
-#' For sailing distances, the function rasterizes land polygons, assigns
-#' high movement cost to land cells, and computes shortest paths using
-#' \pkg{gdistance}. Very close sites (≤100 m) fall back to straight-line
-#' distance. Driving distances are retrieved via `ors_directions()`, using
-#' one or more API keys if provided.
+#' For each harbour, neighbouring sites within 25 km straight-line
+#' (Haversine) distance are identified. Very close sites (≤100 m) fall back
+#' to straight-line distance. Sailing routes are estimated using
+#' least-cost path analysis with \pkg{gdistance}, where land and lakes are
+#' treated as impassable barriers and water is traversable. Natural Earth land
+#' and lake polygons are downloaded and used to construct the movement-cost
+#' surface.
 #'
-#' The function returns either:
-#' * a **short summary** of proximity (value + score), or
-#' * **full results**, including distances, times, plots of sailing and driving routes,
-#'   and classification of which mode (sailing/driving) is slower.
+#' Sailing time is calculated assuming a vessel speed of approximately
+#' 18 km/h (roughly 10 knots). Driving distance and duration are retrieved
+#' using `openrouteservice::ors_directions()` and a speed of 70 km/h is assumed.
+#' When multiple API keys are provided, they are rotated to help avoid API rate
+#' limits.
 #'
-#'
-#'
-#' This function first calculates proximity between Small Craft Harbours (SCH) sites
-#' based on sailing distances (least-cost paths avoiding land) while assuming ~
-#' a speed of 10 knots. It identifies
-#' neighbouring harbours within 25 km straight-line distance, then estimates
-#' sailing routes while avoiding land using raster least-cost path analysis.
-#' The function then calculates the driving distances
-#' using the openrouteservices package. If a waypoint falls on land during the
-#' sailing computation or a driving distance is not available, it defaults back
-#' to a straight-line distance and way cross land. For driving distance if
-#' the straight line computation is used a driving distance of 70 km/h is assumed.
-#' The final output takes the larger of the sailing and driving distances.
-#'
+#' The final selected neighbour is based on the minimum of the maximum travel
+#' time between sailing and driving access (i.e., the neighbour with the
+#' smallest "worst-case" access time).
 #' @param data_CIVI_Sites A data frame likely from [data_CIVI_Sites()]
 #' @param full_results a Boolean indicating if you want a more fulsome result
 #' including the following: "HarbourCode","Sailing_Nearest_Neighbour", "Sailing_Time", "Sailing_Distance",

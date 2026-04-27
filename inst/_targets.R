@@ -292,30 +292,6 @@ tar_target(data_distance,
                  dplyr::select(HarbourCode,Value,Score)
              }),
 
-  #This is the remenants of the original function that did not include lakes...remove -KF
-#  tar_target(ind_sch_proximity,
-#             command={
-#               ors_api_keys <- read.csv(file.path(path_to_store(),"data","ors_api_key.csv")) |>
-#                 pull(key) |>
-#                 unlist()
-#
-#               sites <- data_CIVI_Sites |>
-#                 dplyr::select(-MarineInland) |>
-#                 left_join(context_ind_MarineInland, by = "HarbourCode") |>
-#                 filter(MarineInland == "Marine")
-#
-#
-#                marineSites <- ind_proximity(data_CIVI_Sites=sites, ors_api_key=ors_api_keys, full_results=TRUE)
-#
-#                x <- marineSites %>%
-#                  mutate(HarbourCode = as.numeric(HarbourCode)) |>
-#                  full_join(dplyr::select(context_ind_MarineInland,HarbourCode, MarineInland), by = "HarbourCode") |>
-#                  mutate(Value = if_else(MarineInland == "Inland", NaN, Value),
-#                         Score = if_else(MarineInland == "Inland", NaN, Score)) |>
-#                  dplyr::select(-MarineInland)
-#                x
-#            }),
-
 #this is the proximity function that we will use.
 #The values produced by this function actually represent distance and not proximity,
 #so they are in a reversed orientation

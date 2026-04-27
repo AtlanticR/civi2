@@ -1,5 +1,7 @@
 #' Compute proximity metrics for SCH harbours
 #'
+#' ** DISCLAIMER: This function has been replaced by ind_proximity_lakes,
+#' which also includes locations of lakes.**
 #' This function computes the nearest neighbouring harbour for each
 #' Small Craft Harbour (SCH) site in `data_CIVI_Sites` based on both:
 #' * **sailing distance** (using raster-based least-cost path over water
