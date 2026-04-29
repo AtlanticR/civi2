@@ -599,39 +599,15 @@ tar_target(ind_sch_proximity_lakes,
                  y$Province[which(y$Province == full_names[i])] <- ac
                }
 
-               y |>
-                 dplyr::select(-CSD_Shape) |>
-                 #add categorical columns
-                 dplyr::mutate(
-                   sensitivity_cat = cut(
-                     sensitivity,
-                     breaks = 1:6,
-                     labels = 1:5,
-                     right = FALSE,
-                     include.lowest = TRUE
-                   ),
-                   exposure_cat = cut(
-                     exposure,
-                     breaks = 1:6,
-                     labels = 1:5,
-                     right = FALSE,
-                     include.lowest = TRUE
-                   ),
-                   adaptive_capacity_cat = cut(
-                     adaptive_capacity,
-                     breaks = 1:6,
-                     labels = 1:5,
-                     right = FALSE,
-                     include.lowest = TRUE
-                   ),
-                   CIVI_cat = cut(
-                     CIVI,
-                     breaks = 1:6,
-                     labels = 1:5,
-                     right = FALSE,
-                     include.lowest = TRUE
-                   )
-                 )
+               y <- y |>
+                 dplyr::select(-CSD_Shape)
+
+               y$sensitivity_cat <- as.numeric(cut(y$sensitivity, breaks=3, label=1:3))
+               y$exposure_cat <- as.numeric(cut(y$exposure, breaks=3, label=1:3))
+               y$adaptive_capacity_cat <- as.numeric(cut(y$adaptive_capacity, breaks=3, label=1:3))
+               y$CIVI_cat <- as.numeric(cut(y$CIVI, breaks=3, label=1:3))
+
+               y
 
              }),
 
@@ -641,7 +617,63 @@ tar_target(ind_sch_proximity_lakes,
                            dplyr::select(-geometry.x,-geometry.y),
                          file.path(path_to_store(),"data","CIVI.csv"),
                          row.names = FALSE)
-             })
+             }),
+
+tar_target(CIVI_risk.csv,
+           command={
+
+
+             CIVI
+
+
+             risk <- read.csv(file.path(path_to_store(),"data","psrisk_03122026.csv"))
+
+             CIVI$comname <- NA
+             CIVI$spweight <- NA
+             CIVI$vrisk <- NA
+
+             for (i in seq_along(CIVI$HarbourCode)) {
+               sch <- CIVI[i,]
+               keep <- which(as.numeric(risk$harbourcode) == as.numeric(sch$HarbourCode))
+
+               ## Adding RISK
+
+               if (!(length(keep) == 0)) {
+                 sch_risk <- risk[keep,]
+                 CIVI$comname[i] <- paste0(sch_risk$comname, collapse=", ")
+                 CIVI$spweight[i] <- paste0(sch_risk$spweight, collapse=", ")
+                 CIVI$vrisk[i] <- paste0(sch_risk$vrisk, collapse=", ")
+               }
+
+             }
+
+
+             final <- CIVI[,c("HarbourCode", "Lat", "Long", "exposure", "exposure_cat", "ind_sea_level_change_Value",
+                              "ind_ice_day_change_Value","ind_sea_level_change_Score", "ind_ice_day_change_Score","sensitivity", "sensitivity_cat",
+                              "ind_coastal_sensitivity_index_Value", "ind_harbour_condition_Value", "ind_degree_of_protection_Value",
+                              "ind_coastal_sensitivity_index_Score", "ind_harbour_condition_Score", "ind_degree_of_protection_Score",
+                              "adaptive_capacity","adaptive_capacity_cat", "ind_replacement_cost_Value", "ind_harbour_utilization_Value", "ind_sch_proximity_Value",
+                              "ind_replacement_cost_Score", "ind_harbour_utilization_Score", "ind_sch_proximity_Score","CIVI","CIVI_cat", "comname",
+                              "spweight", "vrisk", "CSDName", "CSDUID", "Province")]
+
+             write.csv(final,
+                       file.path(path_to_store(),"data","CIVI_and_risk.csv"),
+                       row.names = FALSE)
+
+
+             ## CHECK
+             # for (i in seq_along(final$comname)) {
+             #   message(i)
+             #   one <- length(strsplit(final$comname[i], ",")[[1]])
+             #   two <- length(strsplit(final$vrisk[i], ",")[[1]])
+             #   three <- length(strsplit(final$spweight[i], ",")[[1]])
+             #
+             #   if (!(length(unique(c(one,two,three))) == 1)) {
+             #     browser()
+             #   }
+             # }
+
+           })
 
 )
 
