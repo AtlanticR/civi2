@@ -648,7 +648,7 @@ tar_target(CIVI_risk.csv,
              }
 
 
-             final <- CIVI[,c("HarbourCode", "Lat", "Long", "exposure", "exposure_cat", "ind_sea_level_change_Value",
+             final <- CIVI[,c("HarbourCode", "HarbourName", "Lat", "Long", "exposure", "exposure_cat", "ind_sea_level_change_Value",
                               "ind_ice_day_change_Value","ind_sea_level_change_Score", "ind_ice_day_change_Score","sensitivity", "sensitivity_cat",
                               "ind_coastal_sensitivity_index_Value", "ind_harbour_condition_Value", "ind_degree_of_protection_Value",
                               "ind_coastal_sensitivity_index_Score", "ind_harbour_condition_Score", "ind_degree_of_protection_Score",
