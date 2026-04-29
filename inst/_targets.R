@@ -629,7 +629,7 @@ tar_target(CIVI_risk.csv,
              risk <- read.csv(file.path(path_to_store(),"data","psrisk_03122026.csv"))
 
              CIVI$comname <- NA
-             CIVI$spweight <- NA
+             CIVI$spvalue <- NA
              CIVI$vrisk <- NA
 
              for (i in seq_along(CIVI$HarbourCode)) {
@@ -641,7 +641,7 @@ tar_target(CIVI_risk.csv,
                if (!(length(keep) == 0)) {
                  sch_risk <- risk[keep,]
                  CIVI$comname[i] <- paste0(sch_risk$comname, collapse=", ")
-                 CIVI$spweight[i] <- paste0(sch_risk$spweight, collapse=", ")
+                 CIVI$spvalue[i] <- paste0(sch_risk$spvalue, collapse=", ")
                  CIVI$vrisk[i] <- paste0(sch_risk$vrisk, collapse=", ")
                }
 
@@ -654,7 +654,7 @@ tar_target(CIVI_risk.csv,
                               "ind_coastal_sensitivity_index_Score", "ind_harbour_condition_Score", "ind_degree_of_protection_Score",
                               "adaptive_capacity","adaptive_capacity_cat", "ind_replacement_cost_Value", "ind_harbour_utilization_Value", "ind_sch_proximity_Value",
                               "ind_replacement_cost_Score", "ind_harbour_utilization_Score", "ind_sch_proximity_Score","CIVI","CIVI_cat", "comname",
-                              "spweight", "vrisk", "CSDName", "CSDUID", "Province")]
+                              "spvalue", "vrisk", "CSDName", "CSDUID", "Province", "MarineInland")]
 
              write.csv(final,
                        file.path(path_to_store(),"data","CIVI_and_risk.csv"),
