@@ -1,5 +1,3 @@
-
-
 if(!require(librarian)) install.packages("librarian")
 pkgs <- c("AtlanticR/civi2",
           "targets",
@@ -22,6 +20,7 @@ pkgs <- c("AtlanticR/civi2",
           "ggplot2",
           "openrouteservice",
           "htmltools",
+          "cancensus",
           "leaflet")
 shelf(pkgs)
 tar_option_set(packages = basename(pkgs),
@@ -640,12 +639,50 @@ tar_target(CIVI_risk.csv,
 
                if (!(length(keep) == 0)) {
                  sch_risk <- risk[keep,]
+                 sch_risk <- sch_risk[order(-as.numeric(sch_risk$spvalue)), ]
                  CIVI$comname[i] <- paste0(sch_risk$comname, collapse=", ")
                  CIVI$spvalue[i] <- paste0(sch_risk$spvalue, collapse=", ")
                  CIVI$vrisk[i] <- paste0(sch_risk$vrisk, collapse=", ")
                }
 
              }
+
+             # Adding population
+             set_cancensus_cache_path("C:/cancensus_cache", install = TRUE)
+
+             # Get all provinces
+             pr_list <- list_census_regions(dataset = "CA21") %>%
+               filter(level == "PR") %>%
+               pull(region)
+
+             # Pull all CSDs in Canada
+             csd_pop <- lapply(pr_list, function(pr) {
+               get_census(
+                 dataset = "CA21",
+                 regions = list(PR = pr),
+                 level = "CSD",
+                 vectors = "v_CA21_1"
+               )
+             }) %>%
+               bind_rows()
+
+             # Clean + Extract Population
+
+             csd_pop <- csd_pop %>%
+               transmute(
+                 CSDUID = as.character(GeoUID),
+                 Population = as.numeric(`v_CA21_1: Population, 2021`)
+               )
+
+             # Join to CIVI
+             CIVI <- CIVI %>%
+               mutate(CSDUID = as.character(CSDUID))
+
+             CIVI <- CIVI %>%
+               left_join(csd_pop, by = "CSDUID")
+
+
+             # End population
 
 
              final <- CIVI[,c("HarbourCode", "HarbourName", "Lat", "Long", "exposure", "exposure_cat", "ind_sea_level_change_Value",
@@ -654,7 +691,7 @@ tar_target(CIVI_risk.csv,
                               "ind_coastal_sensitivity_index_Score", "ind_harbour_condition_Score", "ind_degree_of_protection_Score",
                               "adaptive_capacity","adaptive_capacity_cat", "ind_replacement_cost_Value", "ind_harbour_utilization_Value", "ind_sch_proximity_Value",
                               "ind_replacement_cost_Score", "ind_harbour_utilization_Score", "ind_sch_proximity_Score","CIVI","CIVI_cat", "comname",
-                              "spvalue", "vrisk", "CSDName", "CSDUID", "Province", "MarineInland")]
+                              "vrisk", "CSDName", "CSDUID","Population", "Province", "MarineInland")]
 
              write.csv(final,
                        file.path(path_to_store(),"data","CIVI_and_risk.csv"),
