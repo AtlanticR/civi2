@@ -718,12 +718,15 @@ tar_target(CIVI_risk.csv,
              final[names(final) %in% c("CIVI", "vulnw")] <-
                lapply(final[names(final) %in% c("CIVI", "vulnw")], round, 1)
 
+             final[grepl("_cat|Score", names(final))] <-
+               lapply(final[grepl("_cat|Score", names(final))], round, 0)
+
              # END
 
 
              write.csv(final,
                        file.path(path_to_store(),"data","CIVI_and_risk.csv"),
-                       row.names = FALSE)
+                       row.names = FALSE, na="")
 
            })
 
