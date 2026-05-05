@@ -9,21 +9,24 @@ knitr::opts_chunk$set(echo = TRUE)
 library(here) 
 library(knitr)
 ```
-This document provides descriptions of the data structure, sources, and calculations behind all of the fields in the CIVI2 dataframe and their contributions to the final Coastal Vulnerability Index.  It is intended as a reference for those inovlved with the upkeep of the CIVI2 database, or interested in understanding the unederlying data and methods.
+This document provides descriptions of the data structure, sources, and calculations behind all of the fields in the CIVI2 CIVI.csv data frame and their contributions to the final Coastal Vulnerability Index.  It is intended as a reference for those involved with the upkeep of the CIVI2 database, or interested in understanding the underlying data and methods.
 
 ## The Coastal Infrastructure Vulerability Index (CIVI): Overview
 CIVI 2.0 is intended as an operational tool for SCH program managers, engineers, and policy analysts, guiding capital planning, risk reduction, and long‑term climate‑resilience strategies across Canada’s fishing harbour network. 
 
-The Coatal Infrastructure Vulerability Index (CIVI) is a numerical indication of the relative vulnerability of small craft harbor (SCH) sites to the effects of climate change. CIVI is calculated using a combination of indicators that influence the sensitivity, exposure, and adaptive capacity of each SCH site to climate change impacts. Indices are provided on an interactive tool along with additional supporting contextual information. 
+The Coastal Infrastructure Vulnerability Index (CIVI) is a numerical indication of the relative vulnerability of small craft harbor (SCH) sites to the effects of climate change. CIVI is calculated using a combination of indicators that influence the sensitivity, exposure, and adaptive capacity of each SCH site to climate change impacts. Indices are provided on an interactive tool along with additional supporting contextual information. 
 
-### General pipeline for data flow towards CIVI  
+### General pipeline for data flow towards CIVI.csv  
+
 **For each CIVI site:**  
 
 1. **CIVI sites**: Small Craft Harbour locations and details as provided by SCH  
 2. **Indicators**: Data for Variables that could impact coastal vulnerability are collected from a variety of sources. Indicator *values* are *scored* on a scale from 1-5, reflecting the relative  vulnerability associated with that factor.  Each indicator is grouped to feed into one of three component categories. 
 2. **Components (sensitivity, exposure, and adaptive capacity)**: Component indices are calculated as the geometric mean of the indicator scores for each of the component categories.   
 3. **CIVI**: The final coastal vulnerability index is calculated as the geometric mean of the three component indices.
-4. **Contextual Material**: Additional information is provided to support the interpretation of CIVI, but does not contribute to the calculation of the index itself.
+4. **Contextual Material**: Additional information is provided to support the interpretation of CIVI, but does not contribute to the calculation of the index itself.  
+**Note:** there is a final processing step that takes CIVI.csv, adds catch vulnerability, rounds some of the numbers, removes unneeded fields, and generates the CIVI_risk.csv file, which is the version of the database that is  given to CDOS for use in the tool. 
+
 ```{r pressure, echo=FALSE, out.width="110%"}
 knitr::include_graphics(here("sandbox/kf/KiyomiStuff/CIVIflowchart.png"))
 ```
@@ -68,33 +71,34 @@ cat("
 ```
 
 
-## CIVI Data Dictionary
+## CIVI.csv Data Dictionary
 **Here, the fields data are organized into the  following sections:**   
 
-1. **Harbour Information**: Fields that describe the Small Craft Harbour location and characteristics (from data provided by SCH)
-2. **Sensitivity**: Fields for data and indicators that contribute to the calculation of the sensitivity component
-3. **Exposure**: Fields for data and indicators that contribute to the calculation of the exposure component
-4. **Adaptive Capacity**: Fields for data and indicators that contribute to the calculation of the adaptive capacity component
+1. **Harbour Information**: Fields that describe the Small Craft Harbour location and characteristics (from data provided by SCH)  
+2. **Sensitivity**: Fields for data and indicators that contribute to the calculation of the sensitivity component which represents the degree to which a system is affected by climate-related hazards    
+3. **Exposure**: Fields for data and indicators that contribute to the calculation of the exposure component which represents the extent to which a system experiences climate-related hazards   
+4. **Adaptive Capacity**: Fields for data and indicators that contribute to the calculation of the adaptive capacity component which represents the system’s ability to adjust, cope, or recover from climate-related hazards    
 5. **CIVI**: Fields for the Coastal Vulnerability Index (the geometric mean of 2-4)
 6. **Contextual Material**: Fields for information that provides additional context to support CIVI, but do not contribute to the calculation of the index itself
+7. **CIVI_risk.csv**: Final preparations for the database that is given to CDOS for use in the tool.
  
 
 ### Harbour Information
-<div style="margin-left: 30px;">
+<div style=" text-indent: -20px; padding-left: 20px;">
 **HarbourCode**    
 Data Type: integer   
-Data Source: SCH, 2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx **($Harb Code)**
+Data Source: SCH, 2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx **($Harb Code)**  
 Description: Unique numerical ID assigned to harbours by SCH   
 
 **HarbourName**    
 Data Type: character   
-Data Source: SCH, 2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx **($Harb Name)**  
+Data Source: SCH, 2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx **($Harb Name)**    
 Description:  Common Harbour name 
 
 **Province**    
 Data Type: character   
-Data Source: SCH, 2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx **($Harbour Province Name)**  
-Description:  Province in which the SCH is located, as assigned by SCH.  Note that some harbours are listed as being in a different province than their geographic location would suggest (e.g. some harbours in Quebec are listed as being in New Brunswick).  This is likely due to the fact that SCH assigns harbours to provinces based on the location of the regional office responsible for that harbour, rather than the actual geographic location of the harbour itself.  For the purposes of CIVI, we will use the province as assigned by SCH, but it is worth noting this discrepancy and considering whether it may have implications for our analysis or interpretation of results. 
+Data Source: SCH, 2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx **($Harbour Province Name)**   
+Description:  Province in which the SCH is located, as assigned by SCH.  Note that some harbours are listed as being in a different province than their geographic location would suggest (e.g. some harbours in Quebec are listed as being in New Brunswick).  This is likely due to the fact that SCH assigns harbours to provinces based on the location of the regional office responsible for that harbour, rather than the actual geographic location of the harbour itself.  This discrepancy and may have implications for analysis/interpretation but this field is not used for any calculation. 
 
 **HarbourType**    
 Data Type: logical   
@@ -113,193 +117,234 @@ Description: geographic coordinates
 
 **SCH_region**    
 Data Type: character   
-Data Source: SCH, 2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx **($Harbour Region Name)**
+Data Source: SCH, 2025-08-19 - SCH Harbours - Latitude and Longitude.xlsx **($Harbour Region Name)**  
 Description: Harbour region name
 
 **MarineInLand**
 Data Type: character   
-Data Source: CANCOAST_CSI_V2_5_6, coastal features shapefile 
+Data Source: CANCOAST_CSI_V2_5_6, coastal features shapefile   
 Description: Classification: Marine vs. Inland location.  If a SCH location does not have any coastal features with 20k from the cancoast shapefile, it is considered "Inland".  This distinction reflects differences in the indicators used to calculate CIVI for marine versus inland sites (for example, sea level rise is only relevant to marine sites). The different symbols are used to ensure that comparisons are made between like systems.
 </div>
 
-### Sensitivity
-2. **ind_coastal_sensitivity_index_Value**  
+### Sensitivity 
+<div style=" text-indent: -20px; padding-left: 20px;">
+**ind_coastal_sensitivity_index_Value**  
 Data Type: numeric   
-Data Source: CanCoast 2.0 (2019): data and indices to describe the sensitivity of Canada's marine coasts to changing climate. Geological Survey of Canada
-Description: **future_siteBufferToMultiLineIntersection()** Puts a 1k buffer around each SCH site, extracts the coastal sensitivity index values (CSI_2000s) for all intersected coastal segments and calculates a weighted average (based on the length of each intersection within the buffer), resulting in a continuous numerical value where higher values represent higher sensitivity and higher vulnerability.  If there are none, it takes the nearest.  If it is an inland location, CSI is not calculated.  
+Data Source: CanCoast 2.0 (2019): data and indices to describe the sensitivity of Canada's marine coasts to changing climate. Geological Survey of Canada  
+Description: *future_siteBufferToMultiLineIntersection()* Puts a 1k buffer around each SCH site, extracts the coastal sensitivity index values (CSI_2000s) for all intersected coastal segments and calculates a weighted average (based on the length of each intersection within the buffer), resulting in a continuous numerical value where higher values represent higher sensitivity and higher vulnerability.  If there are none, it takes the nearest.  If it is an inland location, CSI is not calculated.  
 
-3. **ind_coastal_sensitivity_index_Score**  
+**ind_coastal_sensitivity_index_Score**  
 Data Type: integer   
-Data Source:  ind_coastal_sensitivity_index_Value
-Description:  Values are redistributed into 5 equal breaks and scored 1-5 (5= highest sensitivity)
+Data Source:  ind_coastal_sensitivity_index_Value  
+Description:  Values are redistributed into 5 equal breaks and scored 1-5 (5= highest sensitivity) 
 
-4. **ind_harbour_condition_Value**    
+**ind_harbour_condition_Value**    
 Data Type: numeric   
-Data Source: SCH, 2025-08-05 - CIVI Harbour Condition use and capacity.xlsx 
-Description: Provided as a 0-5 score, where 5 represents good condition
+Data Source: SCH, 2025-08-05 - CIVI Harbour Condition use and capacity.xlsx  
+Description: Provided as a 0-5 score, where 5 represents good condition  
 
-5. **ind_harbour_condition_Score**    
+**ind_harbour_condition_Score**    
 Data Type: integer   
 Data Source: ind_harbour_condition_Value  
 Description: Values are redistributed into 5 equal breaks, scored 1-5 (5 = good condition and low sensitivity). Because good condition represents low sensitivity, this relationship will be flipped when calculating the sensitivity index  
 
-6. **ind_degree_of_protection_Value**    
+**ind_degree_of_protection_Value**    
 Data Type: integer   
-Data Source: SCH, DoP.xlsx 
-Description:  Provided as a 0-5 score, where 5 represents good protection
+Data Source: SCH, DoP.xlsx  
+Description:  Provided as a 0-5 score, where 5 represents good protection  
 
-7. **ind_degree_of_protection_Score**    
+**ind_degree_of_protection_Score**    
 Data Type: integer   
 Data Source: ind_degree_of_protection_Value  
 Description:  Values are redistributed into 5 equal breaks, scored 1-5 (5 = good protection and low sensitivity). Because good protection  represents low sensitivity, this relationship will be flipped when calculating the sensitivity index  
 
-8. **sensitivity**    
+**sensitivity**    
 Data Type: numeric   
-Data Source:   
-Description:  Geometric Mean: ind_coastal_sensitivity_index_Score, ind_harbour_condition_Score (flipped), ind_degree_of_protection_Score(flipped) 
+Data Source: Sensitivity indicator scores  
+Description:  Geometric Mean of ind_coastal_sensitivity_index_Score, ind_harbour_condition_Score (flipped), ind_degree_of_protection_Score(flipped) 
 
-39. **sensitivity_cat**    
+**sensitivity_cat**    
 Data Type: integer   
-Data Source:   
-Description:  Categorical version of the sensitivity index
+Data Source: sensitivity  
+Description: Categorical version of the sensitivity index to demonstrate low, medium, and high vulnerability. Assigned using a 1:3 scoring of sensitivity based on three equal breaks 
+</div>
 
 ### Exposure
-9. **ind_sea_level_change_Value**    
+<div style=" text-indent: -20px; padding-left: 20px;">
+**ind_sea_level_change_Value**    
 Data Type: numeric   
-Data Source:   
-Description: 
+Data Source: PAVICS, Decadal_CMIP6_ensemble-percentiles_allssps_2020-2150_rslc_uplift_YS.nc   
+Description: ssp245, 2100 projected mean decrease in cm, extracted from raster  
 
-10. **ind_sea_level_change_Score**    
+**ind_sea_level_change_Score**    
 Data Type: integer   
-Data Source:   
-Description: 
+Data Source: ind_sea_level_change_Value  
+Description: Values are redistributed into 5 equal breaks, scored 1-5, where smaller is better  
 
-11. **ind_ice_day_change_Value**    
+**ind_ice_day_change_Value**    
 Data Type: numeric   
-Data Source:   
-Description: 
+Data Source: PAVICS, annual_CanDCS-M6_climindices_ensemble_members_30yAvg.ncml  
+Description: ssp245, mean number of ice days, 2071 and 1971 extracted from raster and differenced     
 
-12. **ind_ice_day_change_Score**    
+**ind_ice_day_change_Score**    
 Data Type: integer   
-Data Source:   
-Description: 
+Data Source: ind_ice_day_change_Value  
+Description: Values are redistributed into 5 equal breaks, scored 1-5, where less change is better
 
-13. **exposure**    
+**exposure**    
 Data Type: numeric   
-Data Source:   
-Description:   
+Data Source: exposure indicator scores  
+Description: Geometric Mean of ind_sea_level_change_Score and ind_ice_day_change_Score  
 
-40. **exposure_cat**    
+**exposure_cat**    
 Data Type: integer   
-Data Source:   
-Description:  
+Data Source:  exposure  
+Description:  Categorical version of the exposure index to demonstrate low, medium, and high vulnerability. Assigned using a 1:3 scoring of exposure based on three equal breaks 
+</div>
 
 ### Adaptive Capacity
-14. **ind_replacement_cost_Value**    
+<div style=" text-indent: -20px; padding-left: 20px;">
+**ind_replacement_cost_Value**    
 Data Type: numeric   
-Data Source:   
-Description:  
+Data Source: SCH, 2025-08-05 - CIVI Replacement Cost.xlsx    
+Description: Total replacement cost is calculated by grouping costs by harbour and then summing (because values were provided in multiple categories).   
 
-15. **ind_replacement_cost_Score**    
+**ind_replacement_cost_Score**    
 Data Type: integer   
-Data Source:   
-Description:  
+Data Source: ind_replacement_cost_Value    
+Description: Values are redistributed into 5 equal breaks, scored 1-5, a high replacement cost (5) represents low adaptive capacity,  so this relationship will be flipped when calculating the adaptive capacity index  
 
-16. **ind_harbour_utilization_Value**    
+**ind_harbour_utilization_Value**    
 Data Type: numeric   
-Data Source:   
-Description:  
+Data Source: SCH, 2025-08-05 - CIVI Harbour Condition use and capacity.xlsx  
+Description: Converted from percentages to decimal form to represent proportions 
 
-17. **ind_harbour_utilization_Score**    
+**ind_harbour_utilization_Score**    
 Data Type: integer   
-Data Source:   
-Description:  
+Data Source: ind_harbour_utilization_Value  
+Description: Values are redistributed into 5 equal breaks, scored 1-5, a high utilization value (5) is related to low adaptive capacity, so this relationship will be flipped when calculating the adaptive capacity index 
+</div>
 
-34. **ind_sch_proximity_Nearest_Neighbour**    
+#### Function: ind_proximity_lakes()
+<div style="margin-left: 30px;">
+This function computes the nearest neighbouring harbour for each Small Craft Harbour (SCH) site in data_CIVI_Sites based on both: sailing distance (using raster-based least-cost path over water while avoiding land for Coastal Sites), and driving distance (using the OpenRouteService API).
+ 
+For sailing distances, the function rasterizes land polygons, assigns high movement cost to land cells, and computes shortest paths using gdistance. A speed of 10 knots is assumed. Very close sites (≤100 m) fall back to straight-line distance. Driving distances are retrieved via ors_directions(), using one or more API keys if provided. A speed of 70 km/h is assumed.
+ 
+For each site, a straight line distance determines which SCH locations are within 25 km (excluding those within 0.5km).
+For each nearest neighbor, with both driving and sailing distance, the maximum commute
+Time is taken. The final result is then the minimum of those maximum times. If either a sailing or Driving distance is missing, a NA value is assigned and it is therefore scored a 5 of high vulnerability.
+In land sites, that we do not expect to have driving values, are not included in the CIVI calculation.
+ 
+The function returns either:
+* a short summary containing each harbor's combined proximity value and a 1–5 score derived from the transformed distribution, or
+* full results, including nearest-neighbor identification, sailing and driving metrics, combined maximum-time calculations, and leaflet sailing/driving route visualizations.
+</div>
+
+#### The proximity data* (ors_api_key.csv) are generated in ind_proximity_lakes.R using the *ind_proximity_lakes()* function, and are read into the pipeline as data_distance
+
+<div style=" text-indent: -20px; padding-left: 20px;">
+**ind_sch_proximity_Nearest_Neighbour***    
 Data Type: integer   
-Data Source:   
+Data Source: data_distance$Nearest_Neighbour    
 Description:   
 
-35. **ind_sch_proximity_Sailing_Time**    
+**ind_sch_proximity_Sailing_Time***    
 Data Type: numeric   
-Data Source:   
+Data Source: data_distance$Sailing_Time   
 Description:   
 
-36. **ind_sch_proximity_Sailing_Distance**    
+**ind_sch_proximity_Sailing_Distance***    
 Data Type: numeric   
-Data Source:   
+Data Source: data_distance$Sailing_Distance     
 Description:  
 
-37. **ind_sch_proximity_Driving_Distance**    
+**ind_sch_proximity_Driving_Distance***    
 Data Type: numeric   
-Data Source:   
+Data Source: data_distance$Driving_Distance  
 Description:  
 
-38. **ind_sch_proximity_Driving_Time**    
+**ind_sch_proximity_Driving_Time***    
 Data Type: numeric   
-Data Source:   
+Data Source: data_distance$Driving_Time    
 Description:  
 
-18. **ind_sch_proximity_Value**    
+**ind_sch_proximity_Value***    
 Data Type: numeric   
-Data Source:   
-Description:  
+Data Source: data_distance$value  
+Description: in target ind_sch_proximity_lakes, Extremely long or unrealistic combined travel times (> 1.25 hours) are removed from the scoring distribution and automatically assigned a score of 5, ensuring outliers do not distort the proximity classification. 
 
-19. **ind_sch_proximity_Score**    
+
+**ind_sch_proximity_Score***    
 Data Type: integer   
-Data Source:   
-Description:  
+Data Source: data_distance$value  
+Description: Values are redistributed into 5 equal breaks, scored 1-5, although it is called "proximity", this indicator represents distance and a high distance value (5) represents low adaptive capacity, so this relationship will be flipped when calculating the adaptive capacity index 
 
-20. **adaptive_capacity**    
+**adaptive_capacity**    
 Data Type: numeric   
-Data Source:   
-Description:   
+Data Source: adaptive capacity indicator scores  
+Description: Geometric Mean of ind_replacement_cost_Score (flipped), ind_harbour_utilization_Score (flipped), and ind_sch_proximity_Score (distance, flipped)  
 
-41. **adaptive_capacity_cat**    
+**adaptive_capacity_cat**    
 Data Type: integer   
-Data Source:   
-Description:  
+Data Source: adaptive_capacity  
+Description: Categorical version of the adaptive capacity index to demonstrate low, medium, and high vulnerability. Assigned using a 1:3 scoring of adaptive_capacity based on three equal breaks. 
+</div>
 
 ### CIVI
-21. **CIVI**    
+<div style=" text-indent: -20px; padding-left: 20px;">
+**CIVI**    
 Data Type: numeric   
-Data Source:   
-Description:   
+Data Source: CIVI components  
+Description: Geometric Mean of sensitivity, exposure, and adaptive_capacity (adaptive capacity is flipped in this calculation  because high adaptive capacity is a good thing)  
 
-42. **CIVI_cat**    
+**CIVI_cat**    
 Data Type: integer   
-Data Source:   
-Description:  
-
+Data Source: CIVI   
+Description: Categorical version of CIVI to demonstrate low, medium, and high vulnerability. Assigned using a 1:3 scoring of CIVI based on three equal breaks 
+</div>
 
 ### Contextual Information
-29. **CSDUID**
+<div style=" text-indent: -20px; padding-left: 20px;">
+**CSDUID**  
 Data Type: integer   
-Data Source:   
-Description:
+Data Source: Statistics Canada, 2025 sub division shape files census  
+Description: Census subdivision, numerical ID. Pulled from .shp using st_intersection()  
 
-30. **CSDName**
+**CSDName**  
 Data Type: character   
-Data Source:   
-Description:
+Data Source: Statistics Canada, 2025 sub division shape files census    
+Description: Census subdivision, common name. Pulled from .shp using st_intersection()   
 
-31. **ind_population**
+**ind_population**  
 Data Type: integer   
-Data Source:   
-Description:
+Data Source: Statistics Canada, census data downloaded within workflow from  https://www150.statcan.gc.ca/n1/tbl/csv/17100155-eng.zip  
+Description: Population of census subdivision, joined based on CSDUID  
 
-32. **ind_fishery_reliant_communities**    
+**ind_fishery_reliant_communities**    
 Data Type: character   
-Data Source:   
-Description:   
+Data Source: Provided by the economics group in Ottawa, DFO_CSBP_FishingCommunities_Final_2022.xlsx  
+Description: At the level of census subdivision, this value represents the percent of total income that fisheries account for   
 
-33. **ind_indigenous_community**    
+**ind_indigenous_community**    
 Data Type: integer   
-Data Source:   
-Description:   
+Data Source: Premières Nations / First Nations, open data MapServer. Dwnloaded within workflow from :  https://geo.sac-isc.gc.ca/geomatics/rest/services/Donnees_Ouvertes-Open_Data/Premiere_Nation_First_Nation/MapServer/0/query and https://geo.sac-isc.gc.ca/geomatics/rest/services/Donnees_Ouvertes-Open_Data/Communaute_inuite_Inuit_Community/MapServer/0/query    
+Description: Count of overlapping First Nations and Inuit communities (No data available for Métis)  
+</div>
 
+### CIVI.csv to CIVI_risk.csv  
 
+Originally we were adding the species and organizing based on landed value (comnam=Species Common Name, spvalue=landed value, vrisk=Species vulnerability), but we were asked to remove this information because it could impede on privacy stuff, so this was removed from the final DF.  However if you are ever asked for these data, they can be added to the DF by adding the field names when you call final <- CIVI. The output is the same length, but the new columns come in as vectors to account for all of the species.  
 
+<div style=" text-indent: -20px; padding-left: 20px;">
+**vulnw**    
+Data Type: numeric   
+Data Source: CRIB **to do: expand**  
+Description: An aggregation of all of the species vulnerability scores to represent overall catch vulnerability   
 
-
+**vulnw_cat **    
+Data Type: integer   
+Data Source: vulnw  
+Description: Categorical version of overall catch vulnerability to demonstrate low, medium, and high vulnerability. Assigned using a 1:3 scoring of vulnw based on three equal breaks  
+</div>
 
