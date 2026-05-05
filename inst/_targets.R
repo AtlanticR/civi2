@@ -626,14 +626,17 @@ tar_target(CIVI_risk.csv,
 
 
              risk <- read.csv(file.path(path_to_store(),"data","psrisk_03122026.csv"))
+             catch_vuln <- read.csv(file.path(path_to_store(),"data","VulnAggByHarbour.csv"))
 
              CIVI$comname <- NA
              CIVI$spvalue <- NA
              CIVI$vrisk <- NA
+             CIVI$vulnw <- NA
 
              for (i in seq_along(CIVI$HarbourCode)) {
                sch <- CIVI[i,]
                keep <- which(as.numeric(risk$harbourcode) == as.numeric(sch$HarbourCode))
+               catch_keep <- which(as.numeric(catch_vuln$harbourcode) == as.numeric(sch$HarbourCode))
 
                ## Adding RISK
 
@@ -643,6 +646,10 @@ tar_target(CIVI_risk.csv,
                  CIVI$comname[i] <- paste0(sch_risk$comname, collapse=", ")
                  CIVI$spvalue[i] <- paste0(sch_risk$spvalue, collapse=", ")
                  CIVI$vrisk[i] <- paste0(sch_risk$vrisk, collapse=", ")
+               }
+               if (!(length(catch_keep) == 0)) {
+                 sch_catch <- catch_vuln[catch_keep,]
+                 CIVI$vulnw[i] <- sch_catch$vulnw
                }
 
              }
@@ -681,34 +688,42 @@ tar_target(CIVI_risk.csv,
              CIVI <- CIVI %>%
                left_join(csd_pop, by = "CSDUID")
 
+             ## Add catch vulnerability bin
 
-             # End population
-
+             CIVI$vulnw_cat <- as.numeric(cut(CIVI$vulnw, breaks=3, label=1:3))
+             #comname and vrisk removed (not used right now)
 
              final <- CIVI[,c("HarbourCode", "HarbourName", "Lat", "Long", "exposure", "exposure_cat", "ind_sea_level_change_Value",
                               "ind_ice_day_change_Value","ind_sea_level_change_Score", "ind_ice_day_change_Score","sensitivity", "sensitivity_cat",
                               "ind_coastal_sensitivity_index_Value", "ind_harbour_condition_Value", "ind_degree_of_protection_Value",
                               "ind_coastal_sensitivity_index_Score", "ind_harbour_condition_Score", "ind_degree_of_protection_Score",
                               "adaptive_capacity","adaptive_capacity_cat", "ind_replacement_cost_Value", "ind_harbour_utilization_Value", "ind_sch_proximity_Value",
-                              "ind_replacement_cost_Score", "ind_harbour_utilization_Score", "ind_sch_proximity_Score","CIVI","CIVI_cat", "comname",
-                              "vrisk", "CSDName", "CSDUID","Population", "Province", "MarineInland")]
+                              "ind_replacement_cost_Score", "ind_harbour_utilization_Score", "ind_sch_proximity_Score","CIVI","CIVI_cat",
+                               "CSDName", "CSDUID","Population", "Province", "MarineInland", "vulnw", "vulnw_cat")]
+
+
+             # FIXING ROUNDING OF DIGITS
+             final[names(final)[grepl("Value", names(final)) & names(final) != "ind_sch_proximity_Value"]] <-
+               lapply(final[names(final)[grepl("Value", names(final)) & names(final) != "ind_sch_proximity_Value"]],
+                      round, 1)
+             final$ind_sch_proximity_Value <- round(final$ind_sch_proximity_Value, 2)
+             final$CIVI <- round(final$CIVI, 1)
+
+             final <- final %>%
+               mutate(across(
+                 c(sensitivity, exposure, adaptive_capacity),
+                 ~ round(.x, 1)
+               ))
+
+             final[names(final) %in% c("CIVI", "vulnw")] <-
+               lapply(final[names(final) %in% c("CIVI", "vulnw")], round, 1)
+
+             # END
+
 
              write.csv(final,
                        file.path(path_to_store(),"data","CIVI_and_risk.csv"),
                        row.names = FALSE)
-
-
-             ## CHECK
-             # for (i in seq_along(final$comname)) {
-             #   message(i)
-             #   one <- length(strsplit(final$comname[i], ",")[[1]])
-             #   two <- length(strsplit(final$vrisk[i], ",")[[1]])
-             #   three <- length(strsplit(final$spweight[i], ",")[[1]])
-             #
-             #   if (!(length(unique(c(one,two,three))) == 1)) {
-             #     browser()
-             #   }
-             # }
 
            })
 
