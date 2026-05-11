@@ -610,20 +610,10 @@ tar_target(ind_sch_proximity_lakes,
 
              }),
 
-  tar_target(CIVI.csv,
-             command = {
-               write.csv(CIVI |>
-                           dplyr::select(-geometry.x,-geometry.y),
-                         file.path(path_to_store(),"data","CIVI.csv"),
-                         row.names = FALSE)
-             }),
 
 tar_target(CIVI_risk.csv,
-           command={
-
-
-             CIVI
-
+           {
+             names(CIVI)[which(names(CIVI) == 'ind_population')] <- 'Population'
 
              risk <- read.csv(file.path(path_to_store(),"data","psrisk_03122026.csv"))
              catch_vuln <- read.csv(file.path(path_to_store(),"data","VulnAggByHarbour.csv"))
@@ -654,39 +644,9 @@ tar_target(CIVI_risk.csv,
 
              }
 
-             # Adding population
-             set_cancensus_cache_path("C:/cancensus_cache", install = TRUE)
-
-             # Get all provinces
-             pr_list <- list_census_regions(dataset = "CA21") %>%
-               filter(level == "PR") %>%
-               pull(region)
-
-             # Pull all CSDs in Canada
-             csd_pop <- lapply(pr_list, function(pr) {
-               get_census(
-                 dataset = "CA21",
-                 regions = list(PR = pr),
-                 level = "CSD",
-                 vectors = "v_CA21_1"
-               )
-             }) %>%
-               bind_rows()
-
-             # Clean + Extract Population
-
-             csd_pop <- csd_pop %>%
-               transmute(
-                 CSDUID = as.character(GeoUID),
-                 Population = as.numeric(`v_CA21_1: Population, 2021`)
-               )
-
              # Join to CIVI
              CIVI <- CIVI %>%
                mutate(CSDUID = as.character(CSDUID))
-
-             CIVI <- CIVI %>%
-               left_join(csd_pop, by = "CSDUID")
 
              ## Add catch vulnerability bin
 
@@ -723,11 +683,38 @@ tar_target(CIVI_risk.csv,
 
              # END
 
+             ## Adding a condition to remove NA lat or lngs. This was a result of total replacement cost having a
+             ## harbourCode in the Pacific that was not included in data_CIVI_Sites
+
+             if (any(is.na(final$Lat))) {
+               final <- final[-(which(is.na(final$Lat))),]
+
+             }
+             if (any(is.na(final$Long))) {
+               final <- final[-(which(is.na(final$Long))),]
+
+             }
+
+
 
              write.csv(final,
                        file.path(path_to_store(),"data","CIVI_and_risk.csv"),
                        row.names = FALSE, na="")
 
+           }),
+
+tar_target(CIVI.csv,
+           command = {
+
+             ## THIS IS FOR OPEN DATA. NOTE, IT WILL NOT INCLUDE TOTAL REPLACEMENT COST OR CAT CATEGORIES
+
+             civi <- read.csv(file.path(path_to_store(),"data","CIVI_and_risk.csv"))
+             civi <- civi[, -(which(grepl('_cat', names(civi))))]
+             civi <- civi[, -(which(names(civi) == 'ind_replacement_cost_Value'))]
+
+             write.csv(civi |>
+                       file.path(path_to_store(),"data","CIVI.csv"),
+                       row.names = FALSE)
            })
 
 )
