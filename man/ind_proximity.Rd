@@ -30,6 +30,8 @@ A list of data frames (one per harbour) containing:
 }
 }
 \description{
+** DISCLAIMER: This function has been replaced by ind_proximity_lakes,
+which also includes locations of lakes.**
 This function computes the nearest neighbouring harbour for each
 Small Craft Harbour (SCH) site in \code{data_CIVI_Sites} based on both:
 \itemize{

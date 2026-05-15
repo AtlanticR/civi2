@@ -409,55 +409,55 @@ tar_target(ind_sch_proximity_lakes,
   tar_target(context_ind_csd,
              command={
                # NOTE THIS IS A STATISTIC CANADA SHAPE FILE FOR CSDNAME (google 2025 sub division shape files census)
-               csd <- st_read(list.files(file.path(path_to_store(), "data"), pattern="*shp",full.names = TRUE)) |>
-                 st_transform(4326) |>
-                 st_make_valid()
+               sp <- findSpecialCensusPolygon(df=data_CIVI_Sites, plot=FALSE)
 
-               csd |>
-                 rename(CSDName = CSDNAME) |>
-                 dplyr::select(CSDUID,CSDName) |>
-                 st_intersection(data_CIVI_Sites) |>
-                 as.data.frame() |>
-                 dplyr::select(-geometry) |>
-                 left_join(dplyr::select(csd,CSDUID), by = "CSDUID") |>
-                 as.data.frame() |>
-                 dplyr::select(HarbourCode, CSDUID, CSDName, CSD_Shape = geometry)
+               final <- sp[, c("HarbourCode", "CSDUID", "CSDName", "CSD_Shape")]
 
+               final$CSD_Shape <- st_sfc(final$CSD_Shape, crs = 4326)
 
+               final <- st_as_sf(final, sf_column_name = "CSD_Shape")
+               return(final)
              }),
 
   tar_target(context_ind_population,
-             command = {
-               # Population
-               tmp <- tempfile()
-               download.file("https://www150.statcan.gc.ca/n1/tbl/csv/17100155-eng.zip",tmp)
-               unzip_dir <- tempdir() # Temporary directory for extracted files
-               unzip(tmp, exdir = unzip_dir)
-               pop <- read.csv(file.path(unzip_dir,"17100155.csv"))
+              command={
 
-               # Last 7 digits of pop DGUID are CSDUID
-               y <- context_ind_csd
-               popNew <- NULL
-               for (i in seq_along(data_CIVI_Sites$HarbourCode)) {
+                x <- context_ind_csd
+               set_cancensus_cache_path(tempdir(), install = TRUE, overwrite = TRUE)
+
+               # Get all provinces
+               pr_list <- list_census_regions(dataset = "CA21") %>%
+                 filter(level == "PR") %>%
+                 pull(region)
+
+               # Pull all CSDs in Canada
+               csd_pop <- lapply(pr_list, function(pr) {
+                 get_census(
+                   dataset = "CA21",
+                   regions = list(PR = pr),
+                   level = "CSD",
+                   vectors = "v_CA21_1"
+                 )
+               }) %>%
+                 bind_rows()
+
+               # Clean + Extract Population
+
+               csd_pop <- csd_pop %>%
+                 transmute(
+                   CSDUID = as.character(GeoUID),
+                   Population = as.numeric(`v_CA21_1: Population, 2021`)
+                 )
+               x$ind_population <- 0
+
+               for (i in seq_along(x$HarbourCode)) {
                  message(i)
-                 if (!(is.na(y$CSDUID[i]))) {
-                   keep <- pop[which(grepl(y$CSDUID[i], pop$DGUID) ),]
-                   if (!(length(keep$REF_DATE)  == 0)) {
-                     popNew[[i]] <- keep$VALUE[which(keep$REF_DATE == max(keep$REF_DATE, na.rm=TRUE))]
-                     message(paste0("i = ", i , " and keep = ", keep$VALUE[which(keep$REF_DATE == max(keep$REF_DATE, na.rm=TRUE))]))
-                   } else {
-                     popNew[[i]] <- NA
-                   }
-                 } else {
-                   popNew[[i]] <- NA
-                 }
+                 x$ind_population[i] <- csd_pop$Population[which(csd_pop$CSDUID == x$CSDUID[i])]
+
                }
 
-
-               popNew <- unlist(popNew)
-               y$Pop <- popNew
-               df <- data.frame("HarbourCode"=y$HarbourCode, "ind_population"=popNew)
-               df
+               df <- data.frame(HarbourCode=x$HarbourCode, ind_population=x$ind_population)
+               return(df)
 
              }),
 
@@ -518,7 +518,7 @@ tar_target(ind_sch_proximity_lakes,
                    ID = IDs,
                    n_communities = NA_integer_
                  )
-
+                 sf::sf_use_s2(FALSE)
                  for (i in seq_along(IDs)) {
                    message(i)
                    geom <- y$CSD_Shape[[i]]       # get i-th MULTIPOLYGON
@@ -613,18 +613,20 @@ tar_target(ind_sch_proximity_lakes,
 
 tar_target(CIVI_risk.csv,
            {
-             names(CIVI)[which(names(CIVI) == 'ind_population')] <- 'Population'
+             x <- CIVI
+
+             names(x)[which(names(x) == 'ind_population')] <- 'Population'
 
              risk <- read.csv(file.path(path_to_store(),"data","psrisk_03122026.csv"))
              catch_vuln <- read.csv(file.path(path_to_store(),"data","VulnAggByHarbour.csv"))
 
-             CIVI$comname <- NA
-             CIVI$spvalue <- NA
-             CIVI$vrisk <- NA
-             CIVI$vulnw <- NA
+             x$comname <- NA
+             x$spvalue <- NA
+             x$vrisk <- NA
+             x$vulnw <- NA
 
-             for (i in seq_along(CIVI$HarbourCode)) {
-               sch <- CIVI[i,]
+             for (i in seq_along(x$HarbourCode)) {
+               sch <- x[i,]
                keep <- which(as.numeric(risk$harbourcode) == as.numeric(sch$HarbourCode))
                catch_keep <- which(as.numeric(catch_vuln$harbourcode) == as.numeric(sch$HarbourCode))
 
@@ -633,27 +635,56 @@ tar_target(CIVI_risk.csv,
                if (!(length(keep) == 0)) {
                  sch_risk <- risk[keep,]
                  sch_risk <- sch_risk[order(-as.numeric(sch_risk$spvalue)), ]
-                 CIVI$comname[i] <- paste0(sch_risk$comname, collapse=", ")
-                 CIVI$spvalue[i] <- paste0(sch_risk$spvalue, collapse=", ")
-                 CIVI$vrisk[i] <- paste0(sch_risk$vrisk, collapse=", ")
+                 x$comname[i] <- paste0(sch_risk$comname, collapse=", ")
+                 x$spvalue[i] <- paste0(sch_risk$spvalue, collapse=", ")
+                 x$vrisk[i] <- paste0(sch_risk$vrisk, collapse=", ")
                }
                if (!(length(catch_keep) == 0)) {
                  sch_catch <- catch_vuln[catch_keep,]
-                 CIVI$vulnw[i] <- sch_catch$vulnw
+                 x$vulnw[i] <- sch_catch$vulnw
                }
 
              }
 
              # Join to CIVI
-             CIVI <- CIVI %>%
+             x <- x %>%
                mutate(CSDUID = as.character(CSDUID))
 
              ## Add catch vulnerability bin
 
-             CIVI$vulnw_cat <- as.numeric(cut(CIVI$vulnw, breaks=3, label=1:3))
+             #x$vulnw_cat <- as.numeric(cut(x$vulnw, breaks=3, label=1:3))
              #comname and vrisk removed (not used right now)
 
-             final <- CIVI[,c("HarbourCode", "HarbourName", "Lat", "Long", "exposure", "exposure_cat", "ind_sea_level_change_Value",
+
+             ### TWEAK BG/JH
+             ## We noticed that there was a clear outlier (likely impacting the cut function).
+             ##We therefore automatically assigned 3 stdevs away 3s and did the cut on the rest
+
+             med <- median(x$vulnw, na.rm = TRUE)
+             s   <- sd(x$vulnw, na.rm = TRUE)
+
+             low  <- med - 3*s
+             high <- med + 3*s
+
+             x$vulnw_cat <- NA
+
+             # 1) force outliers to 3
+             x$vulnw_cat[x$vulnw < low | x$vulnw > high] <- 3
+
+             # 2) cut only the in-range values
+             in_range <- x$vulnw >= low & x$vulnw <= high & !is.na(x$vulnw)
+
+             x$vulnw_cat[in_range] <- as.numeric(
+               cut(x$vulnw[in_range],
+                   breaks = 3,
+                   labels = 1:3,
+                   include.lowest = TRUE)
+             )
+
+
+             ## END TWEAK
+
+             final <- x[,c("HarbourCode", "HarbourName", "Lat", "Long", "exposure", "exposure_cat", "ind_sea_level_change_Value",
                               "ind_ice_day_change_Value","ind_sea_level_change_Score", "ind_ice_day_change_Score","sensitivity", "sensitivity_cat",
                               "ind_coastal_sensitivity_index_Value", "ind_harbour_condition_Value", "ind_degree_of_protection_Value",
                               "ind_coastal_sensitivity_index_Score", "ind_harbour_condition_Score", "ind_degree_of_protection_Score",
@@ -675,8 +706,11 @@ tar_target(CIVI_risk.csv,
                  ~ round(.x, 1)
                ))
 
-             final[names(final) %in% c("CIVI", "vulnw")] <-
-               lapply(final[names(final) %in% c("CIVI", "vulnw")], round, 1)
+             final[names(final) %in% c("CIVI")] <-
+               lapply(final[names(final) %in% c("CIVI")], round, 1)
+
+             final[names(final) %in% c("vulnw")] <-
+               lapply(final[names(final) %in% c("vulnw")], round, 2)
 
              final[grepl("_cat|Score", names(final))] <-
                lapply(final[grepl("_cat|Score", names(final))], round, 0)
