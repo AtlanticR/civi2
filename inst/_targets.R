@@ -601,10 +601,18 @@ tar_target(ind_sch_proximity_lakes,
                y <- y |>
                  dplyr::select(-CSD_Shape)
 
-               y$sensitivity_cat <- as.numeric(cut(y$sensitivity, breaks=3, label=1:3))
-               y$exposure_cat <- as.numeric(cut(y$exposure, breaks=3, label=1:3))
-               y$adaptive_capacity_cat <- as.numeric(cut(y$adaptive_capacity, breaks=3, label=1:3))
-               y$CIVI_cat <- as.numeric(cut(y$CIVI, breaks=3, label=1:3))
+
+               y$sensitivity_cat <- score_indicator(data=y, col='sensitivity', n_cat=3, plot=TRUE)
+               y$exposure_cat <- score_indicator(data=y, col='exposure', n_cat=3, plot=TRUE)
+               y$adaptive_capacity_cat <- score_indicator(data=y, col='adaptive_capacity', n_cat=3, plot=TRUE)
+               y$CIVI_cat <- score_indicator(data=y, col='CIVI', n_cat=3, plot=TRUE)
+
+
+
+               #y$sensitivity_cat <- as.numeric(cut(y$sensitivity, breaks=3, label=1:3))
+               #y$exposure_cat <- as.numeric(cut(y$exposure, breaks=3, label=1:3))
+               #y$adaptive_capacity_cat <- as.numeric(cut(y$adaptive_capacity, breaks=3, label=1:3))
+               #y$CIVI_cat <- as.numeric(cut(y$CIVI, breaks=3, label=1:3))
 
                y
 
@@ -660,27 +668,8 @@ tar_target(CIVI_risk.csv,
              ## We noticed that there was a clear outlier (likely impacting the cut function).
              ##We therefore automatically assigned 3 stdevs away 3s and did the cut on the rest
 
-             med <- median(x$vulnw, na.rm = TRUE)
-             s   <- sd(x$vulnw, na.rm = TRUE)
 
-             low  <- med - 3*s
-             high <- med + 3*s
-
-             x$vulnw_cat <- NA
-
-             # 1) force outliers to 3
-             x$vulnw_cat[x$vulnw < low | x$vulnw > high] <- 3
-
-             # 2) cut only the in-range values
-             in_range <- x$vulnw >= low & x$vulnw <= high & !is.na(x$vulnw)
-
-             x$vulnw_cat[in_range] <- as.numeric(
-               cut(x$vulnw[in_range],
-                   breaks = 3,
-                   labels = 1:3,
-                   include.lowest = TRUE)
-             )
-
+             x$vulnw_cat <- score_indicator(data=x, col='vulnw', n_cat=3, plot=TRUE)
 
              ## END TWEAK
 
@@ -733,7 +722,7 @@ tar_target(CIVI_risk.csv,
 
              write.csv(final,
                        file.path(path_to_store(),"data","CIVI_and_risk.csv"),
-                       row.names = FALSE, na="")
+                       row.names = FALSE, na="", fileEncoding = "UTF-8" )
 
            }),
 
@@ -745,10 +734,14 @@ tar_target(CIVI.csv,
              civi <- read.csv(file.path(path_to_store(),"data","CIVI_and_risk.csv"))
              civi <- civi[, -(which(grepl('_cat', names(civi))))]
              civi <- civi[, -(which(names(civi) == 'ind_replacement_cost_Value'))]
+             civi <- civi[, -(which(names(civi) == 'ind_harbour_utilization_Value'))]
+             civi <- civi[, -(which(names(civi) == 'ind_harbour_condition_Value'))]
+
+
 
              write.csv(civi |>
                        file.path(path_to_store(),"data","CIVI.csv"),
-                       row.names = FALSE)
+                       row.names = FALSE, fileEncoding = "UTF-8")
            })
 
 )
