@@ -21,7 +21,8 @@ pkgs <- c("AtlanticR/civi2",
           "openrouteservice",
           "htmltools",
           "cancensus",
-          "leaflet")
+          "leaflet",
+          'readr')
 shelf(pkgs)
 tar_option_set(packages = basename(pkgs),
                # controller = crew_controller_local(workers = 3),
@@ -718,11 +719,14 @@ tar_target(CIVI_risk.csv,
 
              }
 
+             readr::write_excel_csv(
+                    final,
+                    file.path(path_to_store(),"data","CIVI_and_risk.csv")
+                    , na="")
 
-
-             write.csv(final,
-                       file.path(path_to_store(),"data","CIVI_and_risk.csv"),
-                       row.names = FALSE, na="", fileEncoding = "UTF-8" )
+             # write.csv(final,
+             #           file.path(path_to_store(),"data","CIVI_and_risk.csv"),
+             #           row.names = FALSE, na="", fileEncoding = "UTF-8" )
 
            }),
 
@@ -737,11 +741,14 @@ tar_target(CIVI.csv,
              civi <- civi[, -(which(names(civi) == 'ind_harbour_utilization_Value'))]
              civi <- civi[, -(which(names(civi) == 'ind_harbour_condition_Value'))]
 
+             readr::write_excel_csv(
+               final,
+               file.path(path_to_store(),"data","CIVI.csv")
+               , na="")
 
-
-             write.csv(civi |>
-                       file.path(path_to_store(),"data","CIVI.csv"),
-                       row.names = FALSE, fileEncoding = "UTF-8")
+             # write.csv(civi |>
+             #           file.path(path_to_store(),"data","CIVI.csv"),
+             #           row.names = FALSE, fileEncoding = "UTF-8")
            })
 
 )
