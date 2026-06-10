@@ -742,7 +742,7 @@ tar_target(CIVI.csv,
              civi <- civi[, -(which(names(civi) == 'ind_harbour_condition_Value'))]
 
              readr::write_excel_csv(
-               final,
+               civi,
                file.path(path_to_store(),"data","CIVI.csv")
                , na="")
 
