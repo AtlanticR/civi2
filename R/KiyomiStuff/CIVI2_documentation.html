@@ -382,10 +382,10 @@ contextual information.</p>
 <li><strong>CIVI sites</strong>: Small Craft Harbour locations and
 details as provided by SCH<br />
 </li>
-<li><strong>Indicators</strong>: Data for Variables that could impact
+<li><strong>Indicators</strong>: Data for variables that could impact
 coastal vulnerability are collected from a variety of sources. Indicator
 <em>values</em> are <em>scored</em> on a scale from 1-5, reflecting the
-relative vulnerability associated with that factor. Each indicator is
+relative vulnerability associated with that indicator. Each indicator is
 grouped to feed into one of three component categories.</li>
 <li><strong>Components (sensitivity, exposure, and adaptive
 capacity)</strong>: Component indices are calculated as the geometric
@@ -996,68 +996,67 @@ index</p>
 </div>
 <div id="function-ind_proximity_lakes" class="section level4">
 <h4>Function: ind_proximity_lakes()</h4>
-<div style="margin-left: 30px;">
-<p>This function computes the nearest neighbouring harbour for each
-Small Craft Harbour (SCH) site in data_CIVI_Sites based on both: sailing
-distance (using raster-based least-cost path over water while avoiding
-land for Coastal Sites), and driving distance (using the
-OpenRouteService API).</p>
-<p>For sailing distances, the function rasterizes land polygons, assigns
-high movement cost to land cells, and computes shortest paths using
-gdistance. A speed of 10 knots is assumed. Very close sites (≤100 m)
-fall back to straight-line distance. Driving distances are retrieved via
-ors_directions(), using one or more API keys if provided. A speed of 70
-km/h is assumed.</p>
-<p>For each site, a straight line distance determines which SCH
-locations are within 25 km (excluding those within 0.5km). For each
-nearest neighbor, with both driving and sailing distance, the maximum
-commute Time is taken. The final result is then the minimum of those
-maximum times. If either a sailing or Driving distance is missing, a NA
-value is assigned and it is therefore scored a 5 of high vulnerability.
-In land sites, that we do not expect to have driving values, are not
-included in the CIVI calculation.</p>
-<p>The function returns either: * a short summary containing each
-harbor’s combined proximity value and a 1–5 score derived from the
-transformed distribution, or * full results, including nearest-neighbor
-identification, sailing and driving metrics, combined maximum-time
-calculations, and leaflet sailing/driving route visualizations.</p>
-</div>
-</div>
-<div id="the-proximity-data-ors_api_key.csv-are-generated-in-ind_proximity_lakes.r-using-the-ind_proximity_lakes-function-and-are-read-into-the-pipeline-as-data_distance" class="section level4">
-<h4>The proximity data* (ors_api_key.csv) are generated in
-ind_proximity_lakes.R using the <em>ind_proximity_lakes()</em> function,
-and are read into the pipeline as data_distance</h4>
+<p>The proximity data* (ors_api_key.csv) are generated in
+ind_proximity_lakes.R using the <em>ind_proximity_lakes()</em> function.
+This function computes the nearest neighbouring harbour for each SCH
+site in data_CIVI_Sites based on both: sailing distance, and driving
+distance. The function returns either:<br />
+- a short summary containing each harbor’s combined proximity value and
+a 1–5 score derived from the transformed distribution, or<br />
+- full results, including nearest-neighbor identification, sailing and
+driving metrics, combined maximum-time calculations, and leaflet
+sailing/driving route visualizations.</p>
+<p><strong>The full results dataframe is read into the pipeline as
+data_distance</strong></p>
 <div style=" text-indent: -20px; padding-left: 20px;">
 <p><strong>ind_sch_proximity_Nearest_Neighbour</strong>*<br />
 Data Type: integer<br />
 Data Source: data_distance$Nearest_Neighbour<br />
-Description:</p>
-<p><strong>ind_sch_proximity_Sailing_Time</strong>*<br />
-Data Type: numeric<br />
-Data Source: data_distance$Sailing_Time<br />
-Description:</p>
+Description: To identify potential nearest neighbours for each site, a
+straight line distance determines which SCH locations are within 25 km
+(excluding those within 0.5km). Next, sailing and driving distances and
+times are computed for each.</p>
 <p><strong>ind_sch_proximity_Sailing_Distance</strong>*<br />
 Data Type: numeric<br />
 Data Source: data_distance$Sailing_Distance<br />
-Description:</p>
+Description: To calculate sailing distances,using raster-based
+least-cost path over water while avoiding land for coastal sites. The
+function rasterizes land polygons, assigns high movement cost to land
+cells, and computes shortest paths to the nearest neighbours using
+gdistance.</p>
+<p><strong>ind_sch_proximity_Sailing_Time</strong>*<br />
+Data Type: numeric<br />
+Data Source: data_distance$Sailing_ing_Distance_Time<br />
+Description: A speed of 10 knots is assumed to convert $Sailing_Distance
+to sailing time. Very close sites (≤100 m) fall back to straight-line
+distance.</p>
 <p><strong>ind_sch_proximity_Driving_Distance</strong>*<br />
 Data Type: numeric<br />
-Data Source: data_distance$Driving_Distance<br />
-Description:</p>
+Data Source: OpenRouteService API, data_distance$Driving_Distance<br />
+Description: Driving distances to nearest neighbours are retrieved via
+ors_directions(), using one or more API keys if provided.</p>
 <p><strong>ind_sch_proximity_Driving_Time</strong>*<br />
 Data Type: numeric<br />
 Data Source: data_distance$Driving_Time<br />
-Description:</p>
+Description:A speed of 70 km/h is assumed to convert $Driving_Distance
+to driving time</p>
 <p><strong>ind_sch_proximity_Value</strong>*<br />
 Data Type: numeric<br />
-Data Source: data_distance$value<br />
-Description: in target ind_sch_proximity_lakes, Extremely long or
-unrealistic combined travel times (&gt; 1.25 hours) are removed from the
-scoring distribution and automatically assigned a score of 5, ensuring
-outliers do not distort the proximity classification.</p>
+Data Source: data_distance$Value<br />
+Description: For each nearest neighbor, if they have both driving and
+sailing distance avaliable, the maximum commute time is taken. The final
+result and values assigned is then the minimum of those maximum times.
+If either a sailing or Driving distance is missing, a NA value is
+assigned which leads to a scored a 5 of high vulnerability. In land
+sites, that we do not expect to have driving values, are not included in
+the CIVI calculation. Within the CIVI2 pipeline, in
+ind_sch_proximity_lakes, extremely long or unrealistic combined travel
+times (&gt; 1.25 hours) are removed from the scoring distribution and
+automatically assigned a score of 5, ensuring outliers do not distort
+the proximity classification.</p>
 <p><strong>ind_sch_proximity_Score</strong>*<br />
 Data Type: integer<br />
-Data Source: data_distance$value<br />
+Data Source: data_distance$Value<br />
 Description: Values are redistributed into 5 equal breaks, scored 1-5,
 although it is called “proximity”, this indicator represents distance
 and a high distance value (5) represents low adaptive capacity, so this
@@ -1144,7 +1143,7 @@ for all of the species.</p>
 <div style=" text-indent: -20px; padding-left: 20px;">
 <p><strong>vulnw</strong><br />
 Data Type: numeric<br />
-Data Source: CRIB <strong>to do: expand</strong><br />
+Data Source:<br />
 Description: An aggregation of all of the species vulnerability scores
 to represent overall catch vulnerability</p>
 <p><strong>vulnw_cat </strong><br />

@@ -21,7 +21,7 @@ The Coastal Infrastructure Vulnerability Index (CIVI) is a numerical indication 
 **For each CIVI site:**  
 
 1. **CIVI sites**: Small Craft Harbour locations and details as provided by SCH  
-2. **Indicators**: Data for Variables that could impact coastal vulnerability are collected from a variety of sources. Indicator *values* are *scored* on a scale from 1-5, reflecting the relative  vulnerability associated with that factor.  Each indicator is grouped to feed into one of three component categories. 
+2. **Indicators**: Data for variables that could impact coastal vulnerability are collected from a variety of sources. Indicator *values* are *scored* on a scale from 1-5, reflecting the relative  vulnerability associated with that indicator.  Each indicator is grouped to feed into one of three component categories. 
 2. **Components (sensitivity, exposure, and adaptive capacity)**: Component indices are calculated as the geometric mean of the indicator scores for each of the component categories.   
 3. **CIVI**: The final coastal vulnerability index is calculated as the geometric mean of the three component indices.
 4. **Contextual Material**: Additional information is provided to support the interpretation of CIVI, but does not contribute to the calculation of the index itself.  
@@ -174,7 +174,7 @@ Description: Categorical version of the sensitivity index to demonstrate low, me
 **ind_sea_level_change_Value**    
 Data Type: numeric   
 Data Source: PAVICS, Decadal_CMIP6_ensemble-percentiles_allssps_2020-2150_rslc_uplift_YS.nc   
-Description: ssp245, 2100 projected mean decrease in cm, extracted from raster  
+Description: ssp245, 2100 projected mean change in cm, extracted from raster  
 
 **ind_sea_level_change_Score**    
 Data Type: integer   
@@ -225,59 +225,48 @@ Data Source: ind_harbour_utilization_Value
 Description: Values are redistributed into 5 equal breaks, scored 1-5, a high utilization value (5) is related to low adaptive capacity, so this relationship will be flipped when calculating the adaptive capacity index 
 </div>
 
-#### Function: ind_proximity_lakes()
-<div style="margin-left: 30px;">
-This function computes the nearest neighbouring harbour for each Small Craft Harbour (SCH) site in data_CIVI_Sites based on both: sailing distance (using raster-based least-cost path over water while avoiding land for Coastal Sites), and driving distance (using the OpenRouteService API).
- 
-For sailing distances, the function rasterizes land polygons, assigns high movement cost to land cells, and computes shortest paths using gdistance. A speed of 10 knots is assumed. Very close sites (≤100 m) fall back to straight-line distance. Driving distances are retrieved via ors_directions(), using one or more API keys if provided. A speed of 70 km/h is assumed.
- 
-For each site, a straight line distance determines which SCH locations are within 25 km (excluding those within 0.5km).
-For each nearest neighbor, with both driving and sailing distance, the maximum commute
-Time is taken. The final result is then the minimum of those maximum times. If either a sailing or Driving distance is missing, a NA value is assigned and it is therefore scored a 5 of high vulnerability.
-In land sites, that we do not expect to have driving values, are not included in the CIVI calculation.
- 
-The function returns either:
-* a short summary containing each harbor's combined proximity value and a 1–5 score derived from the transformed distribution, or
-* full results, including nearest-neighbor identification, sailing and driving metrics, combined maximum-time calculations, and leaflet sailing/driving route visualizations.
-</div>
+#### Function: ind_proximity_lakes()  
+The proximity data* (ors_api_key.csv) are generated in ind_proximity_lakes.R using the *ind_proximity_lakes()* function.  This function computes the nearest neighbouring harbour for each SCH site in data_CIVI_Sites based on both: sailing distance, and driving distance. The function returns either:  
+-  a short summary containing each harbor's combined proximity value and a 1–5 score derived from the transformed distribution, or  
+-  full results, including nearest-neighbor identification, sailing and driving metrics, combined maximum-time calculations, and leaflet sailing/driving route visualizations.  
 
-#### The proximity data* (ors_api_key.csv) are generated in ind_proximity_lakes.R using the *ind_proximity_lakes()* function, and are read into the pipeline as data_distance
+**The full results dataframe is read into the pipeline as data_distance**
 
 <div style=" text-indent: -20px; padding-left: 20px;">
 **ind_sch_proximity_Nearest_Neighbour***    
 Data Type: integer   
 Data Source: data_distance$Nearest_Neighbour    
-Description:   
-
-**ind_sch_proximity_Sailing_Time***    
-Data Type: numeric   
-Data Source: data_distance$Sailing_Time   
-Description:   
+Description: To identify potential nearest neighbours for each site, a straight line distance determines which SCH locations are within 25 km (excluding those within 0.5km). Next, sailing and driving distances and times are computed for each.  
 
 **ind_sch_proximity_Sailing_Distance***    
 Data Type: numeric   
-Data Source: data_distance$Sailing_Distance     
-Description:  
+Data Source: data_distance$Sailing_Distance       
+Description: To calculate sailing distances,using raster-based least-cost path over water while avoiding land for coastal sites. The function rasterizes land polygons, assigns high movement cost to land cells, and computes shortest paths to the nearest neighbours using gdistance.   
+
+**ind_sch_proximity_Sailing_Time***    
+Data Type: numeric   
+Data Source: data_distance$Sailing_ing_Distance_Time      
+Description: A speed of 10 knots is assumed to convert $Sailing_Distance to sailing time. Very close sites (≤100 m) fall back to straight-line distance.  
 
 **ind_sch_proximity_Driving_Distance***    
 Data Type: numeric   
-Data Source: data_distance$Driving_Distance  
-Description:  
+Data Source: OpenRouteService API, data_distance$Driving_Distance  
+Description: Driving distances to nearest neighbours are retrieved via ors_directions(), using one or more API keys if provided. 
 
 **ind_sch_proximity_Driving_Time***    
 Data Type: numeric   
 Data Source: data_distance$Driving_Time    
-Description:  
-
+Description:A speed of 70 km/h is assumed to convert $Driving_Distance to driving time  
+  
 **ind_sch_proximity_Value***    
 Data Type: numeric   
-Data Source: data_distance$value  
-Description: in target ind_sch_proximity_lakes, Extremely long or unrealistic combined travel times (> 1.25 hours) are removed from the scoring distribution and automatically assigned a score of 5, ensuring outliers do not distort the proximity classification. 
-
+Data Source: data_distance$Value    
+Description: For each nearest neighbor, if they have both driving and sailing distance avaliable, the maximum commute time is taken. The final result and values assigned is then the minimum of those maximum times. If either a sailing or Driving distance is missing, a NA value is assigned which leads to a scored a 5 of high vulnerability. In land sites, that we do not expect to have driving values, are not included in the CIVI calculation. 
+Within the CIVI2 pipeline, in ind_sch_proximity_lakes, extremely long or unrealistic combined travel times (> 1.25 hours) are removed from the scoring distribution and automatically assigned a score of 5, ensuring outliers do not distort the proximity classification. 
 
 **ind_sch_proximity_Score***    
 Data Type: integer   
-Data Source: data_distance$value  
+Data Source: data_distance$Value  
 Description: Values are redistributed into 5 equal breaks, scored 1-5, although it is called "proximity", this indicator represents distance and a high distance value (5) represents low adaptive capacity, so this relationship will be flipped when calculating the adaptive capacity index 
 
 **adaptive_capacity**    
@@ -339,7 +328,7 @@ Originally we were adding the species and organizing based on landed value (comn
 <div style=" text-indent: -20px; padding-left: 20px;">
 **vulnw**    
 Data Type: numeric   
-Data Source: CRIB **to do: expand**  
+Data Source:  
 Description: An aggregation of all of the species vulnerability scores to represent overall catch vulnerability   
 
 **vulnw_cat **    
