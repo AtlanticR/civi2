@@ -261,18 +261,19 @@ Description:A speed of 70 km/h is assumed to convert $Driving_Distance to drivin
 **ind_sch_proximity_Value***    
 Data Type: numeric   
 Data Source: data_distance$Value    
-Description: For each nearest neighbor, if they have both driving and sailing distance avaliable, the maximum commute time is taken. The final result and values assigned is then the minimum of those maximum times. If either a sailing or Driving distance is missing, a NA value is assigned which leads to a scored a 5 of high vulnerability. In land sites, that we do not expect to have driving values, are not included in the CIVI calculation. 
+Description: For each nearest neighbor, if they have both driving and sailing distance available, the maximum commute time is taken. The final result and values assigned is then the minimum of those maximum times. If either a sailing or Driving distance is missing, a NA value is assigned which leads to a scored a 5 of high vulnerability. In land sites, that we do not expect to have driving values, are not included in the CIVI calculation. 
 Within the CIVI2 pipeline, in ind_sch_proximity_lakes, extremely long or unrealistic combined travel times (> 1.25 hours) are removed from the scoring distribution and automatically assigned a score of 5, ensuring outliers do not distort the proximity classification. 
+
 
 **ind_sch_proximity_Score***    
 Data Type: integer   
 Data Source: data_distance$Value  
-Description: Values are redistributed into 5 equal breaks, scored 1-5, although it is called "proximity", this indicator represents distance and a high distance value (5) represents low adaptive capacity, so this relationship will be flipped when calculating the adaptive capacity index 
+Description: Values are redistributed into 5 equal breaks, scored 1-5, although it is called "proximity", this indicator represents distance and a high distance value (5) represents low adaptive capacity. So, to convert the values to reflect proximity, they are flipped, making 1 represent low proximity and high distance.
 
 **adaptive_capacity**    
 Data Type: numeric   
 Data Source: adaptive capacity indicator scores  
-Description: Geometric Mean of ind_replacement_cost_Score (flipped), ind_harbour_utilization_Score (flipped), and ind_sch_proximity_Score (distance, flipped)  
+Description: Geometric Mean of ind_replacement_cost_Score (flipped), ind_harbour_utilization_Score (flipped), and ind_sch_proximity_Score  
 
 **adaptive_capacity_cat**    
 Data Type: integer   
