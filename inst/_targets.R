@@ -724,6 +724,26 @@ tar_target(CIVI_risk.csv,
                     file.path(path_to_store(),"data","CIVI_and_risk.csv")
                     , na="")
 
+             ## Addressing populate the cell with "Not applicable" for cases where data is not
+             ## expected and "Data not available" when the data is expected but missing.
+
+             indicator_names <- c("ind_sea_level_change_Value","ind_ice_day_change_Value","ind_coastal_sensitivity_index_Value",
+                                  "ind_harbour_condition_Value","ind_degree_of_protection_Value", "ind_replacement_cost_Value",
+                                  "ind_harbour_utilization_Value","ind_sch_proximity_Value", 'vulnw', "CIVI", 'exposure', 'sensitivity', 'adaptive_capacity')
+
+             for (i in seq_along(indicator_names)) {
+               if (!(indicator_names[i] %in% c('ind_sea_level_change_Value', 'ind_coastal_sensitivity_index_Value'))) {
+                 final[[indicator_names[i]]][which(is.na(final[[indicator_names[i]]]))] <- 'Data not available'
+               } else {
+                 data_not_applicable <- which(is.na(final[[indicator_names[i]]]) & final$MarineInland == 'Marine')
+                 if (!(length(data_not_applicable) == 0)) {
+                   final[[indicator_names[i]]][which(is.na(final[[indicator_names[i]]]) & final$MarineInland == 'Marine')] <- 'Not applicable'
+                 }
+
+                 final[[indicator_names[i]]][which(is.na(final[[indicator_names[i]]]) & final$MarineInland == 'Inland')] <- 'Data not available'
+               }
+             }
+
              # write.csv(final,
              #           file.path(path_to_store(),"data","CIVI_and_risk.csv"),
              #           row.names = FALSE, na="", fileEncoding = "UTF-8" )
