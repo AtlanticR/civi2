@@ -737,12 +737,14 @@ tar_target(CIVI_risk.csv,
                } else {
                  data_not_applicable <- which(is.na(final[[indicator_names[i]]]) & final$MarineInland == 'Marine')
                  if (!(length(data_not_applicable) == 0)) {
-                   final[[indicator_names[i]]][which(is.na(final[[indicator_names[i]]]) & final$MarineInland == 'Marine')] <- 'Not applicable'
+                   final[[indicator_names[i]]][which(is.na(final[[indicator_names[i]]]) & final$MarineInland == 'Marine')] <- 'Data not Available'
                  }
 
-                 final[[indicator_names[i]]][which(is.na(final[[indicator_names[i]]]) & final$MarineInland == 'Inland')] <- 'Data not available'
+                 final[[indicator_names[i]]][which(is.na(final[[indicator_names[i]]]) & final$MarineInland == 'Inland')] <- 'Not applicable'
                }
              }
+
+             final$ind_sch_proximity_Value[which(final$ind_sch_proximity_Value == "Data not available")] <- 'No SCH locations within 25 km'
 
              # write.csv(final,
              #           file.path(path_to_store(),"data","CIVI_and_risk.csv"),
