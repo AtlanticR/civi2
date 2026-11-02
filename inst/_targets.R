@@ -729,10 +729,13 @@ tar_target(CIVI_risk.csv,
 
              indicator_names <- c("ind_sea_level_change_Value","ind_ice_day_change_Value","ind_coastal_sensitivity_index_Value",
                                   "ind_harbour_condition_Value","ind_degree_of_protection_Value", "ind_replacement_cost_Value",
-                                  "ind_harbour_utilization_Value","ind_sch_proximity_Value", 'vulnw', "CIVI", 'exposure', 'sensitivity', 'adaptive_capacity')
+                                  "ind_harbour_utilization_Value","ind_sch_proximity_Value",
+                                  "ind_sea_level_change_Score","ind_ice_day_change_Score","ind_coastal_sensitivity_index_Score",
+                                  "ind_harbour_condition_Score","ind_degree_of_protection_Score", "ind_replacement_cost_Score",
+                                  "ind_harbour_utilization_Score","ind_sch_proximity_Score", 'vulnw', "CIVI", 'exposure', 'sensitivity', 'adaptive_capacity')
 
              for (i in seq_along(indicator_names)) {
-               if (!(indicator_names[i] %in% c('ind_sea_level_change_Value', 'ind_coastal_sensitivity_index_Value'))) {
+               if (!(indicator_names[i] %in% c('ind_sea_level_change_Value', 'ind_coastal_sensitivity_index_Value','ind_sea_level_change_Score', 'ind_coastal_sensitivity_index_Score'))) {
                  final[[indicator_names[i]]][which(is.na(final[[indicator_names[i]]]))] <- 'Data not available'
                } else {
                  data_not_applicable <- which(is.na(final[[indicator_names[i]]]) & final$MarineInland == 'Marine')
@@ -745,6 +748,8 @@ tar_target(CIVI_risk.csv,
              }
 
              final$ind_sch_proximity_Value[which(final$ind_sch_proximity_Value == "Data not available")] <- 'No SCH locations within 25 km'
+             final$ind_sch_proximity_Score[which(final$ind_sch_proximity_Score == "Data not available")] <- 'No SCH locations within 25 km'
+
 
              # write.csv(final,
              #           file.path(path_to_store(),"data","CIVI_and_risk.csv"),
